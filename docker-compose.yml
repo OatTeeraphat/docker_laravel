@@ -7,11 +7,8 @@ services:
       volumes:
         - ./mysql/initdb/:/docker-entrypoint-initdb.d
         - ./mysql/data/:/var/lib/mysql
-      environment:
-        - MYSQL_ROOT_PASSWORD=123132123
-        - MYSQL_DATABASE=lemp_db
-        - MYSQL_USER=lemp
-        - MYSQL_PASSWORD=123456
+      env_file:
+        - ./env/mariadb.env
   php:
       image: php:7.2-fpm-alpine
       container_name: lemp_php-fpm
@@ -37,5 +34,7 @@ services:
     image: phpmyadmin/phpmyadmin
     container_name: lemp-phpmyadmin
     restart: always
+    env_file:
+        - ./env/pma.env
     expose:
       - 80
