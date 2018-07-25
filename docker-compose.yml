@@ -9,14 +9,21 @@ services:
         - ./mysql/data/:/var/lib/mysql
       env_file:
         - ./env/mariadb.env
+      ports:
+        - 3306:3306
+      
   php:
       image: php:7.2-fpm-alpine
       container_name: lemp_php-fpm
       restart: always
+      build : ./
+      links : 
+        - db
       volumes:
         - ./www/:/var/www/html
       expose:
         - 9000
+
 
   nginx:
       image: nginx:alpine
