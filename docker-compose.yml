@@ -20,7 +20,7 @@ services:
       links : 
         - db
       volumes:
-        - ./www/:/var/www/html
+        - ./www/:/var/www/
       expose:
         - 9000
 
