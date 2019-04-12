@@ -1,7 +1,7 @@
 FROM php:7.2-fpm
 RUN docker-php-ext-install mysqli pdo pdo_mysql
 # Copy composer.lock and composer.json
-COPY composer.lock composer.json /var/www/
+# COPY composer.lock composer.json /var/www/
 
 # Set working directory
 WORKDIR /var/www
@@ -43,7 +43,7 @@ COPY . /var/www
 COPY --chown=www:www . /var/www
 
 # Change current user to www
-USER www
+# USER www
 
 # Expose port 9000 and start php-fpm server
 EXPOSE 9000
