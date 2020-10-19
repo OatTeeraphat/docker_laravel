@@ -78,13 +78,16 @@ class CustomerListController extends Controller
     protected function created($request)
     {
         //dd($request);
+        $is_already_used = isset($request->already_used) ? 1 : 0;
         Customer::create([
             'name' => $request->name,
             'phone' => $request->phone,
             'customer_type' => $request->customer_type,
             'address' => $request->address,
             'line' => $request->line,
-            'activate' => 1
+            'activate' => 1,
+            'increment' => 0,
+            'already_used' => $is_already_used
         ]);
 
         $request->session()->flash('success', 'เพิ่มลูกค้า ในระบบเรียบร้อยแล้ว !');
@@ -93,6 +96,7 @@ class CustomerListController extends Controller
 
     protected function updated($request)
     {
+        $is_already_used = isset($request->already_used) ? 1 : 0;
         $data = Customer::find((int)$request->id);
         $data->update([
             'name' => $request->name,
@@ -100,6 +104,7 @@ class CustomerListController extends Controller
             'customer_type' => $request->customer_type,
             'address' => $request->address,
             'line' => $request->line,
+            'already_used' => $is_already_used
         ]);
         $data->save();
 
@@ -110,6 +115,7 @@ class CustomerListController extends Controller
 
     public function createWell(Request $request)
     {
+        $is_already_used = isset($request['already_used']) ? 1 : 0;
         $well = Customer::create([
             'name' => $request['name'],
             's_name' => $request['s_name'],
@@ -118,7 +124,9 @@ class CustomerListController extends Controller
             'customer_type' => $request['customer_type'],
             'address' => $request['address'],
             'line' => $request['line'],
-            'activate' => 1
+            'activate' => 1,
+            'increment' => 0,
+            'already_used' => $is_already_used
         ]);
 
         return response()->json($well);

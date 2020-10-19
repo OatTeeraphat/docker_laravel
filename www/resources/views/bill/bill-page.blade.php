@@ -44,10 +44,10 @@
 
         <div class="row justify-content-center">
 
-            <div class="col-md-12">
+            <div class="col-md-12 print-md-12">
 
                 <div class="nav-pills-container mb-3 not-print">
-                    <ul class="nav nav-pills">
+                    <ul class="nav nav-pills  justify-content-center justify-content-md-start">
                         <li class="nav-item mr-2">
                             <a class="nav-link" href="{{url('bill')}}">บิลรับงาน</a>
                         </li>
@@ -55,7 +55,7 @@
                             <a class="nav-link active" href="{{url('recent')}}">ดูบิลเก่า</a>
                         </li>
                         <li class="nav-item mr-2">
-                            <a class="nav-link" href="{{url('report')}}">รายงาน</a>
+                            <a class="nav-link" href="{{url('summary')}}">สรุปรายวัน</a>
                         </li>
                     </ul>
                 </div>
@@ -97,10 +97,15 @@
                                                 <div class="text-left d-flex align-items-end">
                                                     <div class="align-items-end p-max-40">
                                                         <h3 class="mt-1">ใบรับ-ส่งงาน</h3>
-                                                        <p><span>เลขที่</span><strong>{{isset($bill) ? $bill->bill_id : ''}}</strong></p>
+                                                        <p class="bill-num" ><span>เลขที่</span><strong>{{isset($bill) ? $bill->bill_id : ''}}</strong></p>
                                                         <p><span>วันที่</span> {{isset($bill) ? $bill->date : ''}}</p>
                                                         <p><span>นาม</span> {{isset($customer) ? $customer->name : ''}}</p>
                                                         <p><span>โทร</span> {{isset($customer) ? $customer->phone : ''}}</p>
+                                                        <p><span>งาน</span> {{isset($bill) ? (
+                                                                                    $bill->job_type === '1' ? 'ซ่อม' : (
+                                                                                    $bill->job_type === '2' ? 'แกะสลัก' :
+                                                                                    'อื่นๆ' ) ) : ''}}
+                                                        </p>
                                                     </div>
                                                 </div>
                                             </div>
@@ -108,7 +113,7 @@
                                                 <div class="text-right d-flex align-items-end">
                                                     <div class="align-items-end p-max-60">
                                                         <img src="{{url('/').'/public/images/'}}jewerly.png">
-                                                        <h4 class="mb-0"> คลีนิกอัญมณี (jewelry clinic)</h4><br>
+                                                        <h4 class="mb-0"> คลีนิกอัญมณี (Jewelry Clinic)</h4><br>
                                                         <p>{{isset($branch) ? $branch->address : ''}}</p>
                                                         <p class="mb-1">โทร. <strong>{{isset($branch) ? $branch->phone : ''}}</strong> {{isset($setting) ? $setting->head_r_2 : ''}}</p>
                                                         <p><small>{{isset($setting) ? $setting->head_r_1 : ''}}</small><br>
@@ -134,13 +139,13 @@
                                                                     <table class="table table-sort table-bordered sorted_table print-table">
                                                                         <thead class="sorted_head">
                                                                         <tr>
-                                                                            <th class="static disabled" width="{{ 100/$count_a }}%"></th>
+                                                                            <th class="static disabled text-center" width="{{ 100/$count_a }}%"></th>
                                                                             @foreach ($amulet as $i => $a)
-                                                                                <th class="disabled" width="{{ 100/$count_a }}%" data-amulet="{{$a->id}}" id="amulet-{{$a->id}}">
+                                                                                <th class="disabled text-center" width="{{ 100/$count_a }}%" data-amulet="{{$a->id}}" id="amulet-{{$a->id}}">
                                                                                     {{$a->name}}
                                                                                 </th>
                                                                             @endforeach
-                                                                            <th class="disabled" width="{{ (100/$count_a)+2 }}%">ยอดเงิน</th>
+                                                                            <th class="disabled text-center" width="{{ (100/$count_a)+2 }}%">ยอดเงิน</th>
                                                                         </tr>
                                                                         </thead>
                                                                         <tbody class="sorted_body">
@@ -160,7 +165,7 @@
                                                                                                   data-amount="" data-price="" readonly
                                                                                         >{{$jobData}}</textarea>
                                                                                         <div class="value-area-job" style="display: none">
-                                                                                            <span class="badge badge-primary badge-amount"></span>
+                                                                                            <span class="badge badge-primary badge-amount"></span><br>
                                                                                             <span class="badge badge-primary badge-price"></span>
                                                                                         </div>
                                                                                     </td>
@@ -184,17 +189,16 @@
                                             @if($materialData != '')
                                         <div class="row">
                                             <div class="col-12">
-                                                <p><strong>รายการส่วนประกอบ </strong> : <small>{{$materialData}}</small></p>
+                                                <p><strong>รายการส่วนประกอบ </strong> : <small class="small-print">{{$materialData}}</small></p>
                                             </div>
                                         </div>
                                             @endif
                                         @endif
 
                                         @if(isset($imagePart))
-                                        <div class="row mb-2">
+                                        <div class="row my-2">
                                             <div class="col-12">
                                                 @if(count($imagePart) > 0)
-                                                    <p class="mb-2"><strong>รูปงานซ่อม</strong></p>
                                                     <div class="d-flex justify-content-start">
                                                     @foreach ($imagePart as $img)
                                                         <div class="print-img border-dark">
@@ -208,12 +212,12 @@
                                         @endif
 
                                         <div class="d-flex justify-content-between border border-dark p-2 mb-2">
-                                            <p>รวมทั้งสิ้น <strong> {{$costData}}</strong>
+                                            <small class="{{$payData != 0 ? 'mt-3' : 'mt-1'}}"><strong>ผู้รับเงิน</strong> ........................................</small>
+                                            <p class="text-right">รวมทั้งสิ้น <strong> {{$costData}}</strong>
                                                 @if($payData != 0)
-                                                <span class="cash-remain mb-0">ชำระแล้ว <strong> {{$payData}}</strong>ยอดต้องชำระ <strong> {{$remainPayData}}</strong></span>
+                                                    <span class="cash-remain mb-0">ชำระแล้ว <strong> {{$payData}}</strong>ยอดต้องชำระ <strong> {{$remainPayData}}</strong></span>
                                                 @endif
                                             </p>
-                                            <small class="{{$payData != 0 ? 'mt-3' : 'mt-1'}}"><strong>ผู้รับเงิน</strong> .................................................</small>
                                         </div>
                                         <div class="d-flex justify-content-between">
                                             <div class="bill-footer bill-footer-box border border-dark p-2" style="width: calc(60% - 4px);">
@@ -226,14 +230,14 @@
                                                     <div class="d-inline align-items-end bill-header bill-footer">
                                                         <div class="text-center">
                                                             <div class="align-items-end">
-                                                                <small>.................................................</small>
+                                                                <small>........................................</small>
                                                                 <small>ผู้รับงาน</small>
                                                             </div>
                                                         </div>
                                                     </div>
                                                     <div class="d-inline align-items-end bill-header bill-footer">
                                                         <div class="text-center">
-                                                            <small>.................................................</small>
+                                                            <small>........................................</small>
                                                             <small>ลูกค้ารับทราบ</small>
                                                         </div>
                                                     </div>
@@ -245,14 +249,16 @@
                                                 <div class="text-center mt-3">
                                                     <div class="align-items-end mb-2">
                                                         <br>
-                                                        <small>.............................................. <strong>ผู้รับสินค้า</strong></small>
+                                                        <small>..................................... <strong>ผู้รับสินค้า</strong></small>
                                                     </div>
                                                     <div class="align-items-end">
-                                                        <small>วันที่ ...................................................</small>
+                                                        <small>วันที่ .....................................</small>
                                                     </div>
                                                 </div>
                                             </div>
                                         </div>
+
+                                        <div class="small small-print text-right">ผู้ออกเอกสาร {{ Auth::user()->name }} {{$getDateServer}}  {{isset($bill) ? isset($bill->bill_id) ? '(ยอมรับค่า 0)' : '' : ''}}</div>
                                     </div>
                                 </div>
                             </div>
@@ -274,16 +280,16 @@
         @media print {
             @page {
                 size: A5 portrait;
-                margin: 0px;
+                margin: 0 !important;
             }
             @page:first {
-                margin: 0px;
+                margin: 0 !important;
             }
             html,body{
                 height:100%;
                 width:100%;
-                margin:0;
-                padding:0;
+                margin: 0 !important;
+                padding:0 !important;
             }
             .container, body {
                 min-width:100% !important;
@@ -378,8 +384,8 @@
         function formatMoney(value){
             //console.log(value)
             return parseFloat(value, 10)
-                .toFixed(2)
-                .replace(/(\d)(?=(\d{3})+\.)/g, "$1,")
+                .toFixed(0)
+                .replace(/(\d)(?=(\d\d\d)+(?!\d))/g, "$1,")
                 .toString()
         }
 

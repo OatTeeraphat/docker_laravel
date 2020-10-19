@@ -23,6 +23,7 @@ class Bill extends Model
         'process',
         'deliver',
         'pay',
+        'allow_zero',
         'user_id',
         'customer_id',
         'job_type',
@@ -43,6 +44,11 @@ class Bill extends Model
     public function part()
     {
         return $this->hasMany('App\Model\Part','bill_ref', 'id');
+    }
+
+    public function gold()
+    {
+        return $this->hasMany('App\Model\Gold','bill_ref', 'id');
     }
 
     public function customer()

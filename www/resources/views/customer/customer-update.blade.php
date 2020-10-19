@@ -3,7 +3,7 @@
 @section('content')
     <div class="container">
         <div class="row justify-content-center">
-            <div class="col-md-10">
+            <div class="col-12">
                 <div class="row">
                     <nav aria-label="breadcrumb">
                         <ol class="breadcrumb bg-transparent py-0">
@@ -85,6 +85,12 @@
                             </div>
 
                             <div class="form-group row mb-0">
+                                <div class="col-md-6 offset-md-4 mb-3">
+                                    <div class="custom-control custom-checkbox my-1 mr-sm-2">
+                                        <input type="checkbox" class="custom-control-input" {{ $customer->already_used == 1 ? 'checked' : "" }}  id="customControlInline" name="already_used" value="1" >
+                                        <label class="custom-control-label" for="customControlInline">ลูกค้าใหม่ [ยังไม่เคยใช้บริการ]</label>
+                                    </div>
+                                </div>
                                 <div class="col-md-6 offset-md-4">
                                     <button type="submit" class="btn btn-primary btn-lg">
                                         {{ __('ยืนยันการแก้ไข') }}

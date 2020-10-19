@@ -7,6 +7,7 @@ use App\Model\Amulet;
 use App\Model\Bill;
 use App\Model\Craft;
 use App\Model\Customer;
+use App\Model\Gold;
 use App\Model\Job;
 use App\Model\Material;
 use App\Model\Order;
@@ -16,7 +17,10 @@ use App\Model\Setting;
 use App\User;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
 use Intervention\Image\Facades\Image;
+
+use App\Http\Controllers\Export\ExportController;
 
 class HomeController extends Controller
 {
@@ -34,7 +38,8 @@ class HomeController extends Controller
     {
         $job    = Job::orderBy('order', 'asc')->get();
         $amulet = Amulet::orderBy('order', 'asc')->get();
-        $material = Material::orderBy('order', 'asc')->get();
+        $material = Material::where('activate','1')->orderBy('order', 'asc')->get();
+
 
         if ($request->id == null){
 
@@ -47,6 +52,11 @@ class HomeController extends Controller
             $billData = Bill::where('bill_id', $request->id)
                         ->with(['order','customer','part','payment'])
                         ->get();
+
+
+            if(!count($billData)){
+                return  "{\"response\" : \"404\", \"message\" : \"ค้นหาบิล ". $request->id ." ไม่พบ\"}";
+            }
 
             $image = $billData[0]->image_part;
             $images = explode( ',', $image );
@@ -109,16 +119,31 @@ class HomeController extends Controller
                 $cost +=  $l['price'];
             }
 
+            $materialData = '';
             $materialCost = 0;
             if (isset($billData[0]->part)){
                 foreach ($billData[0]->part as $l){
+                    $materialName = Material::where('id', $l['material_id'])->get();
+                    setlocale(LC_MONETARY,"en_US");
+                    $materialData .=  $materialName[0]->name.' '.number_format((float)$l['price'], 2, '.', ',') .' บาท ';
                     $materialCost +=  $l['price'];
                 }
             }
 
+            //dd($materialData);
+
             $costData = $cost + $materialCost;
 
-            return view('home', compact('amulet','job', 'material', 'billData', 'imagePart', 'type' ,'total_pay','costData','payment','craft','pay'));
+            $gold_data_ = Gold::where([['activate', 1],['bill_ref',$billData[0]->id]])->get();
+            //dd($gold_data_);
+            $gold_data = (object)[
+                'gold_1' => count($gold_data_) > 0 ? $gold_data_[0] : null ,
+                'gold_2' => count($gold_data_) > 1 ? $gold_data_[1] : null
+            ];
+
+            //dd($gold_data);
+
+            return view('home', compact('amulet','job', 'material', 'billData', 'imagePart', 'type' ,'total_pay','costData','payment','craft','pay','materialData','gold_data'));
 
         }
 
@@ -148,7 +173,10 @@ class HomeController extends Controller
         $total_pay = 0;
         if (isset($billData[0]->payment)){
             foreach ($billData[0]->payment as $l){
-                $total_pay += $l['value'];
+                if($l->activate == 1) {
+                    $total_pay += $l['value'];
+                }
+
             }
         }
         $payData = $total_pay > 0 ? number_format((float)$total_pay, 2, '.', ',') .' บาท ' : 0;
@@ -178,8 +206,10 @@ class HomeController extends Controller
             }
         }
 
+        $dt = Carbon::now();
+        $getDateServer = sprintf('%02d',$dt->day) .'/'. sprintf('%02d',$dt->month) .'/'. strval($dt->year + 543) .'-'. $dt->toTimeString();
         //dd($imagePart);
-        return view('bill/bill-page', compact('amulet','job', 'billData', 'imagePart' ,'payData', 'userData', 'materialData', 'costData', 'remainPayData','setting'));
+        return view('bill/bill-page', compact('amulet','job', 'billData', 'imagePart' ,'payData', 'userData', 'materialData', 'costData', 'remainPayData','setting','getDateServer'));
     }
 
     public function initBill(Request $request)
@@ -196,8 +226,10 @@ class HomeController extends Controller
         $imgIndex = ($request->key) + 1;
         $imgName = request()->file->getClientOriginalName();
         $imgType = pathinfo($imgName, PATHINFO_EXTENSION);
+        $branch_id = intval(Auth::user()->branch_id) + 100;
         $timeStamp = Carbon::now()->timestamp;
-        $fileName = 'job_'. $timeStamp .'_'. $imgIndex . '.' . $imgType;
+        $fileName = 'job_'.$branch_id .'_'. $timeStamp .'_'. $imgIndex . '.' . $imgType;
+
 
         request()->file->move(public_path('images/job/'), $fileName);
 
@@ -290,7 +322,6 @@ class HomeController extends Controller
 
     protected function create($request)
     {
-        //dd($request);
         $customerId = $this->createCustomer($request);
         $billId = $this->createBillId($request);
         $imgList = $this->imgList($request);
@@ -307,6 +338,7 @@ class HomeController extends Controller
 
     protected function update($request)
     {
+        //dd($request);
         $customerId = $this->createCustomer($request);
         $imgList = $this->imgList($request);
         $bill = $this->updateBill($request,$customerId,$imgList);
@@ -314,7 +346,13 @@ class HomeController extends Controller
         $this->updatePart($request,$bill);
         $this->createPayment($request,$bill);
         $this->checkPaymentRemain($request,$bill);
-        if ($request->gold !== null){
+        if ($request->gold_id_ !== null){
+            $this->updateGold($request,$bill);
+        } else {
+            $this->createGold($request,$bill);
+        }
+
+        if ($bill->status > 0){
             $request->session()->flash('success', 'ปิดบิล '.$bill->bill_id.' เรียบร้อยแล้ว !');
         } else {
             $request->session()->flash('success', 'แก้ไขข้อมูล '.$bill->bill_id.' เรียบร้อยแล้ว !');
@@ -328,7 +366,16 @@ class HomeController extends Controller
         $date = explode('/',$request->date);
         $dateCarbon = Carbon::create(strval($date[2]-543), $date[1], $date[0]);
         $cash = str_replace(',', '', $request->cash);
-        $branch_id = User::find($request->user_id)->branch_id;
+        $customer = Customer::find($customerId);
+        $c_increment = $customer->increment + 1;
+        $customer->update([
+            'increment' => $c_increment
+        ]);
+
+        $trigger_backup = "";
+
+        $customer->save;
+        $user = Auth::user();
         $bill = Bill::create([
             'date' => $request->date,
             'date_' => $dateCarbon,
@@ -337,29 +384,32 @@ class HomeController extends Controller
             'process' => 1,
             'deliver' => 0,
             'pay' => 0,
-            'user_id' => $request->user_id,
+            'allow_zero' => isset($request->allow_zero) ? 1 : 0,
+            'user_id' => $user->id,
             'customer_id' => $customerId,
-            'branch_id' => $branch_id,
+            'branch_id' => $user->branch_id,
             'image_part'=> $imgList,
             'job_type' => $request->order_type,
             'cash' => $cash,
             'activate' => 1,
+            'gold' => 1,
         ]);
         return $bill;
     }
 
     protected function updateBill($request,$customerId,$imgList){
-
+        //dd($request);
         $date = explode('/',$request->date);
         $dateCarbon = Carbon::create(strval($date[2]-543), $date[1], $date[0]);
         $data = Bill::find((int)$request->bill_id);
+        $allow_zero = isset($request->allow_zero) ? 1 : 0;
+        $close_bill = intval($request->close_bill);
         $cash = str_replace(',', '', $request->cash);
-        //dd($request);
-        if ($request->gold !== null){
+        $total = str_replace(',', '', $request->total);
+        $cash_remain = floatval($cash) - floatval($total);
+        if ($data->deliver == 1 && $cash_remain == 0 && $close_bill == 1 ){
             $data->update([
                 'cash' => $cash,
-                'gold' => $request->gold,
-                'craft_id' => intval($request->craft_id),
                 'pay' => 1,
                 'status' => 1,
             ]);
@@ -372,26 +422,31 @@ class HomeController extends Controller
                 'job_type' => $request->order_type,
                 'cash' => $cash,
                 'activate' => 1,
+                'allow_zero' => $allow_zero
             ]);
         }
         $data->save;
         return $data;
+
     }
 
     protected function createBillId($request)
     {
-        $current = Carbon::now();
-        $current_day = $current->day;
-        $current_month = $current->month;
-
-        $current_year = $current->year + 543;
-        $last_of_day = Bill::orderBy('created_at','desc')->first()->created_at->day;
 
         $branchId = User::find((int) $request->user_id)->branch_id;
         $branch = Branch::find($branchId);
         $branchTxt = 100+$branchId;
 
-        if (!empty($last_of_day)){
+        $current = Carbon::now();
+        $current_day = $current->day;
+        $current_month = $current->month;
+
+        $current_year = $current->year + 543;
+        $last_of_day = Bill::where('branch_id', intval($branchId))
+            ->orderBy('created_at','desc')->first()->created_at->day;
+
+
+        if (isset($last_of_day)){
             if ($last_of_day == $current_day){
                 $increment = $branch->increment + 1;
                 $branch->update(['increment' => $increment ]);
@@ -401,23 +456,26 @@ class HomeController extends Controller
             } else {
                 $branch->update(['increment' => 1 ]);
                 $branch->save;
+                $this->cron_backup($branchId);
                 $billId = $branchTxt .'-'. substr($current_year, 2, 2) . sprintf('%02d',$current_month) . sprintf('%02d',$current_day) .'-'. '001' ;
                 return $billId;
             }
         } else {
             $branch->update(['increment' => 1 ]);
             $branch->save;
+            $this->cron_backup($branchId);
             $billId = $branchTxt .'-'. substr($current_year, 2, 2) . sprintf('%02d',$current_month) . sprintf('%02d',$current_day) .'-'. '001' ;
             return $billId;
         }
     }
+
 
     protected function createOrder($request,$bill,$customerId)
     {
         $orderList = json_decode($request->table_job ,true);
         $date = explode('/',$bill->date);
         $dateCarbon = Carbon::create(strval($date[2]-543), $date[1], $date[0]);
-        $branch_id = User::find($request->user_id)->branch_id;
+        $branch_id = $bill->branch_id;
         foreach ($orderList as $i => $l){
             $val = $this->valueOrder($l['value']);
             Order::create([
@@ -439,10 +497,8 @@ class HomeController extends Controller
     protected function updateOrder($request,$bill,$customerId){
         $orderOld = Order::where('bill_ref', $bill->id )->get()->toArray();
         $orderList = json_decode($request->table_job ,true);
-        $branch_id = User::find($request->user_id)->branch_id;
         $create = $orderList;
         $delete = $orderOld;
-
         foreach ( $orderList as $i => $l ) {
             foreach ($orderOld as $j => $o) {
                 $date = explode('/',$request->date);
@@ -470,11 +526,12 @@ class HomeController extends Controller
             $date = explode('/',$bill->date);
             $dateCarbon = Carbon::create(strval($date[2]-543), $date[1], $date[0]);
             $val = $this->valueOrder($l['value']);
+            $branch_id = $bill->branch_id;
             Order::create([
                 'bill_ref' => $bill->id,
                 'date' => $bill->date,
                 'date_' => $dateCarbon,
-                'branch_id' => 1,
+                'branch_id' => $branch_id,
                 'customer_id' => $customerId,
                 'user_id' => $bill->user_id,
                 'job_id' => $l['job_id'],
@@ -489,8 +546,6 @@ class HomeController extends Controller
             $data = Order::find($o['id']);
             $data->delete();
         }
-
-
     }
 
     protected function valueOrder($value)
@@ -525,6 +580,7 @@ class HomeController extends Controller
         $partList = json_decode($request->table_material , true);
         $partOld = Part::where('bill_ref', $bill->id )->get()->toArray();
         $create = $partList;
+        $delete = $partOld;
         foreach ($partList as $i => $l){
             foreach ($partOld as $j => $o){
                 $rule = $o['material_id'] == $l['material_id'];
@@ -535,6 +591,7 @@ class HomeController extends Controller
                     ]);
                     $data->save;
                     unset($create[$i]);
+                    unset($delete[$j]);
                 }
             }
         }
@@ -545,6 +602,11 @@ class HomeController extends Controller
                 'material_id' => $l['material_id'],
                 'price' => $l['value'],
             ]);
+        }
+
+        foreach ( $delete as $i => $o ) {
+            $data = Part::find($o['id']);
+            $data->delete();
         }
     }
 
@@ -566,6 +628,8 @@ class HomeController extends Controller
                     'address' => $request->address,
                     'line' => $request->line,
                     'activate'=> 1,
+                    'increment' => 0,
+                    'already_used' => 0,
                 ]);
                 return $customer->id;
             } else {
@@ -582,6 +646,7 @@ class HomeController extends Controller
         $payment= [
             $request->pay_cash,
             $request->pay_credit,
+            $request->pay_voucher,
             $request->pay_online,
             $request->pay_coupon
         ];
@@ -589,10 +654,11 @@ class HomeController extends Controller
         $method = [
             'cash',
             'credit',
+            'voucher',
             'online',
             'coupon'
         ];
-        $branchId = User::find((int) $request->user_id)->branch_id;
+        $branchId = $bill->branch_id;
         foreach ($payment as $i => $l){
             if ($l !== null){
                 $cash = str_replace(',', '', $l);
@@ -611,6 +677,116 @@ class HomeController extends Controller
 
     }
 
+    protected function createGold($request,$bill){
+        //dd($request);
+        $branchId = $bill->branch_id;
+        if ($request->craft_id_){
+            $gold_1 = str_replace(',', '', $request->gold_);
+            Gold::Create([
+                'bill_ref' => $bill->id,
+                'value' => $gold_1,
+                'craft_id' => $request->craft_id_,
+                'activate' => 1,
+                'branch_id' => $branchId
+            ]);
+            $data = Bill::find($bill->id);
+            $data->update([
+                'gold' => 1
+            ]);
+            $data->save;
+        }
+        if ($request->craft_id_2){
+            $gold_2 = str_replace(',', '', $request->gold_2);
+            Gold::Create([
+                'bill_ref' => $bill->id,
+                'value' => $gold_2,
+                'craft_id' => $request->craft_id_2,
+                'activate' => 1,
+                'branch_id' => $branchId
+            ]);
+            $data = Bill::find($bill->id);
+            $data->update([
+                'gold' => 1
+            ]);
+            $data->save;
+        }
+
+        if ($request->gold_input_check !== null){
+            $data = Bill::find($bill->id);
+            $data->update([
+                'gold' => 0
+            ]);
+            $data->save;
+        }
+
+        if ($request->gold_input_check == null){
+            $data = Bill::find($bill->id);
+            $data->update([
+                'gold' => 1
+            ]);
+            $data->save;
+        }
+
+    }
+
+    protected function updateGold($request,$bill){
+        //dd($request);
+        $branchId = $bill->branch_id;
+        if (!isset($request->gold_id_2) && isset($request->gold_id_)){
+            if (isset($request->craft_id_2) && isset($request->gold_2)){
+                $gold_2 = str_replace(',', '', $request->gold_2);
+                Gold::Create([
+                    'bill_ref' => $bill->id,
+                    'value' => $gold_2,
+                    'craft_id' => $request->craft_id_2,
+                    'activate' => 1,
+                    'branch_id' => $branchId
+                ]);
+            }
+        }
+
+        if (isset($request->gold_id_)){
+            $gold = Gold::find($request->gold_id_);
+            if (isset($request->gold_)){
+                $gold_1 = str_replace(',', '', $request->gold_);
+                $gold->update([
+                    'bill_ref' => $bill->id,
+                    'value' => $gold_1,
+                    'craft_id' => $request->craft_id_,
+                    'activate' => 1,
+                    'branch_id' => $branchId
+                ]);
+                $gold->save();
+            }
+            else{
+                $gold->delete();
+                $data = Bill::find($bill->id);
+                $data->update([
+                    'gold' => 0
+                ]);
+                $data->save;
+            }
+
+        }
+        if (isset($request->gold_id_2)){
+            $gold = Gold::find($request->gold_id_2);
+            if (isset($request->gold_2)){
+                $gold_1 = str_replace(',', '', $request->gold_2);
+                $gold->update([
+                    'bill_ref' => $bill->id,
+                    'value' => $gold_1,
+                    'craft_id' => $request->craft_id_2,
+                    'activate' => 1,
+                    'branch_id' => $branchId
+                ]);
+                $gold->save();
+            }
+            else{
+                $gold->delete();
+            }
+        }
+    }
+
     protected function updateBillDeliver(Request $request)
     {
         $data = Bill::find((int)$request->bill_id);
@@ -619,8 +795,8 @@ class HomeController extends Controller
         ]);
         $data->save;
         $request->session()->flash('success', 'ยืนยันการส่งงานบิล '.$data->bill_id.' เรียบร้อยแล้ว !');
-    return back();
-}
+        return back();
+    }
 
     protected function checkPaymentRemain($request,$bill)
     {
@@ -668,6 +844,16 @@ class HomeController extends Controller
         $data->save;
 
         return back();
+
+    }
+
+    protected function cron_backup($branch_id){
+
+        if($branch_id == 1){
+            $export = new ExportController();
+            $export->cron_backup();
+        }
+
 
     }
 

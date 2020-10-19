@@ -14,6 +14,11 @@
 
 Auth::routes();
 
+
+if ($_SERVER['HTTP_HOST'] == "youcandojewelry.com" ) {
+    URL::forceScheme('https');
+}
+
 Route::get('/', function () {
 
     if (Auth::check()) {
@@ -40,9 +45,13 @@ Route::post('/bill/payment/delete','HomeController@voidPayment');
 Route::get('/report','Report\ReportController@index');
 Route::post('/report','Report\ReportController@getReport');
 
+Route::get('/summary','Report\SummaryController@index');
+Route::post('/summary','Report\SummaryController@getSummary');
 
 Route::get('/recent', 'Recent\RecentController@index');
+Route::post('/recent', 'Recent\RecentController@getBillBydate');
 Route::get('/recent/bill', 'HomeController@print');
+
 
 Route::get('/api/bill', 'Recent\RecentController@getBill');
 
@@ -91,7 +100,23 @@ Route::group(['middleware' => 'role:admin'], function () {
     Route::post('api/setting/updateJob', 'Setting\SettingController@updateJob');
     Route::post('api/setting/updateAmulet', 'Setting\SettingController@updateAmulet');
 
-});
-});
+
+    Route::get('/export', 'Export\ExportController@index')->name('export');
+    Route::post('api/export', 'Export\ExportController@export');
+    Route::post('api/export/getLength', 'Export\ExportController@checkLength');
+    Route::post('api/export/dropLength', 'Export\ExportController@dropLenght');
+
+    Route::get('export/dump/{file_name}', function($file_name = null)
+    {
+        $path = storage_path().'/'.'backup/' .$file_name;
+        if (file_exists($path)) {
+            return Response::download($path);
+        }
+    });
+
+
+
+});//role:admin
+});//router web
 
 

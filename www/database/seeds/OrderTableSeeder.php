@@ -31,8 +31,8 @@ class OrderTableSeeder extends Seeder
         Cause::create([ 'desc' => 'ไม่รักก็ไม่ต้องมาห่วงฉัน']);
 
         $bill = Bill::create([
-            'date' => '11/06/2561',
-            'date_'=> Carbon::parse('2018-06-11'),
+            'date' => '05/03/2562',
+            'date_'=> Carbon::parse('2019-03-05'),
             'bill_id' => '101-610611-001',
             'status' => 0,
             'activate' => 1,
@@ -44,13 +44,13 @@ class OrderTableSeeder extends Seeder
             'branch_id' => 1,
             'image_part'=> null,
             'job_type' => '1',
-            'cash' => 0.00,
+            'cash' => 200,
         ]);
 
         Order::create([
             'bill_ref' => $bill->id,
-            'date' => '11/06/2561',
-            'date_'=> Carbon::parse('2018-06-11'),
+            'date' => '05/03/2562',
+            'date_'=> Carbon::parse('2019-03-05'),
             'customer_id' => 3,
             'user_id' => 1,
             'job_id' => 1,
@@ -63,8 +63,8 @@ class OrderTableSeeder extends Seeder
 
         Order::create([
             'bill_ref' => $bill->id,
-            'date' => '11/06/2561',
-            'date_'=> Carbon::parse('2018-06-11'),
+            'date' => '05/03/2562',
+            'date_'=> Carbon::parse('2019-03-05'),
             'customer_id' => 3,
             'user_id' => 1,
             'job_id' => 2,
@@ -89,6 +89,39 @@ class OrderTableSeeder extends Seeder
             'user_recive' => 1,
             'branch_id' => 1,
         ]);
+
+
+        $bill2 = Bill::create([
+            'date' => '04/03/2562',
+            'date_'=> Carbon::parse('2019-03-04'),
+            'bill_id' => '101-610611-001',
+            'status' => 0,
+            'activate' => 1,
+            'process' => 0,
+            'deliver' => 0,
+            'pay' => 0,
+            'user_id' => 1,
+            'customer_id' => 3,
+            'branch_id' => 1,
+            'image_part'=> null,
+            'job_type' => '1',
+            'cash' => 200,
+        ]);
+
+        Order::create([
+            'bill_ref' => $bill2->id,
+            'date' => '05/03/2562',
+            'date_'=> Carbon::parse('2019-03-05'),
+            'customer_id' => 3,
+            'user_id' => 1,
+            'job_id' => 1,
+            'amulet_id'=> 3,
+            'amount' => 2,
+            'branch_id' => 1,
+            'price' => 500.00,
+            'activate' => 1,
+        ]);
+
 
 
 

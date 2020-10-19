@@ -7,10 +7,12 @@ use App\Model\Amulet;
 use App\Model\Bill;
 use App\Model\Craft;
 use App\Model\Customer;
+use App\Model\Gold;
 use App\Model\Job;
 use App\Model\Order;
 use App\Model\Payment;
 use App\User;
+use function Couchbase\defaultDecoder;
 use Illuminate\Http\Request;
 use App\Http\Controllers\Controller;
 use Illuminate\Support\Carbon;
@@ -49,12 +51,13 @@ class ReportController extends Controller
         $getData = $this->orderReport($dn,$dt,$branch_id);
 
         $data = $getData->data;
+        $link = $getData->link;
         $report_header = $getData->header;
         $unit = $getData->unit;
         $current = null;
         $report_date = $date_start;
 
-        return view('report/report', compact('report','data', 'report_header','branch','current','report_desc','report_date','report_branch','unit'));
+        return view('report/report', compact('report','data', 'report_header','branch','current','report_desc','report_date','report_branch','unit','link'));
 
     }
 
@@ -74,17 +77,24 @@ class ReportController extends Controller
         $getData = $this->selectReport($report_id,$start_bc,$end_bc,$branch_id);
 
         $data = $getData->data;
+        $link = $getData->link;
         $report_header = $getData->header;
 
         $report = $getInit->report;
         $branch = $getInit->branch;
         $current = $this->currentReport($request);
+
         $unit = $getData->unit;
         $report_desc = null;
         $report_date = null;
         $report_branch = null;
 
-        return view('report/report', compact('report','data','report_header','branch','current','report_desc','report_date','report_branch','unit'));
+        if(isset($request->dump)){
+            return $getData;
+        } else {
+            return view('report/report', compact('report','data','report_header','branch','current','report_desc','report_date','report_branch','unit','link'));
+        }
+
 
     }
 
@@ -103,8 +113,9 @@ class ReportController extends Controller
         $report = array(
             (object)[ 'id' => 1, 'name' => 'ยอดรวมงานซ่อม' ],
             (object)[ 'id' => 2, 'name' => 'ยอดรวมบิล' ],
-            (object)[ 'id' => 3, 'name' => 'ยอดรวมชำระ' ],
-            (object)[ 'id' => 4, 'name' => 'ยอดรวมน้ำหนักทอง']
+            (object)[ 'id' => 3, 'name' => 'ยอดชำระบิล' ],
+            (object)[ 'id' => 4, 'name' => 'ยอดชำระรายวัน'],
+            (object)[ 'id' => 5, 'name' => 'ยอดรวมน้ำหนักทอง']
         );
 
         return (object)[
@@ -127,8 +138,12 @@ class ReportController extends Controller
                 return $this->paymentReport($start_bc,$end_bc,$branch_id);
                 break;
             case 4:
+                return $this->paymentMethodReport($start_bc,$end_bc,$branch_id);
+                break;
+            case 5:
                 return $this->goldReport($start_bc,$end_bc,$branch_id);
                 break;
+
         }
 
     }
@@ -179,11 +194,13 @@ class ReportController extends Controller
         }
         $header = $this->initOrderHeader();
         $unit   = 'บาท';
+        $link   = true;
 
         return (object)[
             'header' => $header,
             'data' => $data,
-            'unit' => $unit
+            'unit' => $unit,
+            'link' => $link
         ];
     }
 
@@ -218,7 +235,7 @@ class ReportController extends Controller
         $amulet = Amulet::all();
         return array(
             (object)[ 'field' => 'date', 'name' => 'วันที่' , 'search' => false , 'select' => null],
-            (object)[ 'field' => 'bill_id', 'name' => 'เลขที่บิล' , 'search' => false , 'select' => null],
+            (object)[ 'field' => 'bill_id', 'name' => 'เลขที่บิล' , 'search' => true , 'select' => null],
             (object)[ 'field' => 'c_name', 'name' => 'ชื่อลูกค้า' , 'search' => true , 'select' => null],
             (object)[ 'field' => 'c_type', 'name' => 'ลูกค้า' , 'search' => true , 'select' => $c_type],
             (object)[ 'field' => 'job', 'name' => 'งานซ่อม' , 'search' => true , 'select' => $job ],
@@ -244,11 +261,13 @@ class ReportController extends Controller
         }
         $header = $this->initBillHeader();
         $unit   = 'บาท';
+        $link   = true;
 
         return (object)[
             'header' => $header,
             'data' => $data,
-            'unit' => $unit
+            'unit' => $unit,
+            'link' => $link
         ];
     }
 
@@ -332,7 +351,7 @@ class ReportController extends Controller
 
         return array(
             (object)[ 'field' => 'date', 'name' => 'วันที่' , 'search' => false , 'select' => null],
-            (object)[ 'field' => 'bill_id', 'name' => 'เลขที่บิล' , 'search' => false , 'select' => null],
+            (object)[ 'field' => 'bill_id', 'name' => 'เลขที่บิล' , 'search' => true , 'select' => null],
             (object)[ 'field' => 'c_name', 'name' => 'ชื่อลูกค้า' , 'search' => true , 'select' => null],
             (object)[ 'field' => 'c_type', 'name' => 'ลูกค้า' , 'search' => true , 'select' => $c_type],
             (object)[ 'field' => 'c_phone', 'name' => 'หมายเลขโทรศัพท์' , 'search' => false , 'select' => null],
@@ -362,11 +381,13 @@ class ReportController extends Controller
         }
         $header = $this->initPaymentHeader();
         $unit   = 'บาท';
+        $link   = true;
 
         return (object)[
             'header' => $header,
             'data' => $data,
-            'unit' => $unit
+            'unit' => $unit,
+            'link' => $link
         ];
     }
 
@@ -389,6 +410,9 @@ class ReportController extends Controller
                 break;
             case 'coupon':
                 $type = 'คูปอง';
+                break;
+            case 'voucher':
+                $type = 'Voucher';
                 break;
         }
 
@@ -428,8 +452,9 @@ class ReportController extends Controller
         $p_method = array(
             (object)[ 'id' => '1', 'name' => 'เงินสด'],
             (object)[ 'id' => '2', 'name' => 'บัตรเครดิต'],
+            (object)[ 'id' => '3', 'name' => 'Voucher'],
             (object)[ 'id' => '4', 'name' => 'คูปอง'],
-            (object)[ 'id' => '3', 'name' => 'ออนไลน์']
+            (object)[ 'id' => '5', 'name' => 'ออนไลน์'],
         );
         $p_status = array(
             (object)[ 'id' => '1', 'name' => 'รับเงิน'],
@@ -437,7 +462,7 @@ class ReportController extends Controller
         );
         return array(
             (object)[ 'field' => 'date', 'name' => 'วันที่' , 'search' => false , 'select' => null],
-            (object)[ 'field' => 'bill_id', 'name' => 'เลขที่บิล' , 'search' => false , 'select' => null],
+            (object)[ 'field' => 'bill_id', 'name' => 'เลขที่บิล' , 'search' => true , 'select' => null],
             (object)[ 'field' => 'c_name', 'name' => 'ชื่อลูกค้า' , 'search' => true , 'select' => null],
             (object)[ 'field' => 'c_type', 'name' => 'ลูกค้า' , 'search' => true , 'select' => $c_type],
             (object)[ 'field' => 'p_method', 'name' => 'รูปแบบ' , 'search' => true , 'select' => $p_method ],
@@ -453,38 +478,42 @@ class ReportController extends Controller
         $branch_id =intval($branch_id);
 
         if ($branch_id !== 0){
-            $query = [['activate',1],['status', 1],['branch_id', $branch_id ]];
+            $query = [['activate',1],['branch_id', $branch_id ]];
         } else {
-            $query = [['activate',1],['status', 1]];
+            $query = [['activate',1]];
         }
 
-        $bill = Bill::where($query)->whereBetween('date_', [$start_bc, $end_bc])->get();
+        $gold = Gold::where($query)->whereBetween('created_at', [$start_bc, $end_bc])->get();
 
         $data = [];
-        foreach ($bill as $o){
+        foreach ($gold as $o){
             $data[] = $this->dataModelGold($o);
         }
         $header = $this->initGoldHeader();
         $unit   = 'กรัม';
+        $link   = true;
 
         return (object)[
             'header' => $header,
             'data' => $data,
-            'unit' => $unit
+            'unit' => $unit,
+            'link' => $link
         ];
     }
 
     protected function dataModelGold($data)
     {
-
+        //dd($data);
         $craft_name =  Craft::find($data->craft_id)->name;
         $branch = Branch::find($data->branch_id)->name;
+        $bill = Bill::find($data->bill_ref);
+        $dt = $data->created_at;
         $model = (object)[
-            'date' => $data->date,
-            'bill_id' => $data->bill_id,
+            'date' => sprintf('%02d',$dt->day) .'/'.sprintf('%02d',$dt->month) .'/'.strval($dt->year + 543),
+            'bill_id' => $bill->bill_id,
             'branch' => $branch,
             'craft_name' => $craft_name,
-            'amount' => number_format((float)$data->gold, 2, '.', ','),
+            'amount' => number_format((float)$data->value, 2, '.', ','),
         ];
         return $model;
     }
@@ -493,13 +522,184 @@ class ReportController extends Controller
     {
         $branch = Branch::all();
         return array(
-            (object)[ 'field' => 'date', 'name' => 'วันที่' , 'search' => false , 'select' => null],
-            (object)[ 'field' => 'bill_id', 'name' => 'เลขที่บิล' , 'search' => false , 'select' => null],
+            (object)[ 'field' => 'date', 'name' => 'วันที่ใช้ทอง' , 'search' => false , 'select' => null],
+            (object)[ 'field' => 'bill_id', 'name' => 'เลขที่บิล' , 'search' => true , 'select' => null],
             (object)[ 'field' => 'branch', 'name' => 'สาขา' , 'search' => true , 'select' => $branch],
             (object)[ 'field' => 'craft_name', 'name' => 'ชื่อช่าง' , 'search' => true , 'select' => null ],
             (object)[ 'field' => 'amount', 'name' => 'จำนวน' , 'search' => false , 'select' => null],
         );
     }
 
+
+    protected function paymentMethodReport($start_bc,$end_bc,$branch_id)
+    {
+        $payment = $this->paymentByBranchByDay($start_bc,$end_bc,$branch_id);
+
+        //dd($payment);
+
+        $data = [];
+        foreach ($payment as $o){
+            $data[] = $this->dataModelPaymentMethod($o);
+        }
+        $header = $this->initPaymentMethodHeader();
+        $unit   = 'บาท';
+        $link   = false;
+
+        return (object)[
+            'header' => $header,
+            'data' => $data,
+            'unit' => $unit,
+            'link' => $link
+        ];
+    }
+
+    protected function paymentByBranchByDay($start_bc,$end_bc,$branch_id)
+    {
+        $branch_id =intval($branch_id);
+
+        if ($branch_id !== 0){
+            $query = [['branch_id', $branch_id ]];
+            $payment = Payment::where($query)
+                ->whereBetween('created_at', [$start_bc, $end_bc])
+                ->get()
+                ->groupBy(function($date) {
+                    return Carbon::parse($date->created_at)->format('d-m-y');
+                });
+
+            $paymentByDay = [];
+            foreach ($payment as $group) {
+                $paymentByDay[] =  $group->groupBy(['branch_id','method']);
+            }
+            //$paymentDayKey = $payment->keys();
+            $holly = [];
+            $paymentWithKey = [];
+                foreach ($paymentByDay as $i => $l) {
+                    foreach ($l as $j => $q) {
+                        foreach ($q as $k => $r) {
+                            $paymentWithKey[] = $r;
+                        }
+                    }
+                }
+                //dd($paymentWithKey);
+
+                foreach ($paymentWithKey as $res) {
+                    $well = $res->toArray();
+                    if ($well[0]['activate']){
+                        $initial = array_shift($well);
+                        $t = array_reduce($well, function($result, $item) {
+                            $result['method'] = $item['method'];
+                            $result['branch_id'] = $item['branch_id'];
+                            $result['value'] += $item['value'];
+                            return $result;
+                        }, $initial);
+                        $holly[] = $t;
+                    }
+                }
+
+
+            return $holly;
+
+        }
+        else {
+            $payment = Payment::whereBetween('created_at', [$start_bc, $end_bc])
+                ->get()
+                ->groupBy(function($date) {
+                    return Carbon::parse($date->created_at)->format('d-m-y');
+                });
+
+            $paymentByDay = [];
+            foreach ($payment as $group) {
+                $paymentByDay[] =  $group->groupBy(['branch_id','method']);
+            }
+
+            $paymentWithKey = [];
+
+            foreach ($paymentByDay as $i => $l) {
+                foreach ($l as $j => $q) {
+                    foreach ($q as $k => $r) {
+                        $paymentWithKey[] = $r;
+                    }
+                }
+            }
+            //dd($paymentWithKey);
+            $holly = [];
+
+            foreach ($paymentWithKey as $res) {
+
+                $well = $res->toArray();
+                if ($well[0]['activate']){
+                    $initial = array_shift($well);
+                    $t = array_reduce($well, function($result, $item) {
+                        $result['method'] = $item['method'];
+                        $result['branch_id'] = $item['branch_id'];
+                        $result['value'] += $item['value'];
+                        return $result;
+                    }, $initial);
+                    $holly[] = $t;
+                }
+
+            }
+            return $holly;
+
+        }
+
+    }
+
+    protected function dataModelPaymentMethod($data)
+    {
+        $data = (object)$data;
+        //dd($data->created_at);
+        $type = '';
+        switch ($data->method) {
+            case 'cash':
+                $type = 'เงินสด';
+                break;
+            case 'credit':
+                $type = 'บัตรเครดิต';
+                break;
+            case 'online':
+                $type = 'ออนไลน์';
+                break;
+            case 'coupon':
+                $type = 'คูปอง';
+                break;
+            case 'voucher':
+                $type = 'Voucher';
+                break;
+        }
+
+        $date = explode('-',$data->created_at);
+        $date = sprintf('%02d',$date[2]).'/'.sprintf('%02d',$date[1]).'/'.strval($date[0] + 543);
+
+        $branch = Branch::find($data->branch_id)->name;
+
+        $model = (object)[
+            'date' => $date,
+            'branch' => $branch,
+            'method' => $type,
+            'amount' => number_format((float)$data->value, 2, '.', ','),
+        ];
+        return $model;
+    }
+
+    protected function initPaymentMethodHeader()
+    {
+        $branch = Branch::all();
+
+        $p_method = array(
+            (object)[ 'id' => '1', 'name' => 'เงินสด'],
+            (object)[ 'id' => '2', 'name' => 'บัตรเครดิต'],
+            (object)[ 'id' => '3', 'name' => 'Voucher'],
+            (object)[ 'id' => '4', 'name' => 'คูปอง'],
+            (object)[ 'id' => '5', 'name' => 'ออนไลน์'],
+        );
+
+        return array(
+            (object)[ 'field' => 'date', 'name' => 'วันที่' , 'search' => false , 'select' => null],
+            (object)[ 'field' => 'branch', 'name' => 'สาขา' , 'search' => true , 'select' => $branch],
+            (object)[ 'field' => 'method', 'name' => 'รูปแบบ' , 'search' => true , 'select' => $p_method],
+            (object)[ 'field' => 'amount', 'name' => 'ยอดรวม' , 'search' => false , 'select' => null],
+        );
+    }
 
 }

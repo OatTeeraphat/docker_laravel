@@ -11,18 +11,12 @@
         <div class="row justify-content-center mb-3">
             <div class="col-md-12">
 
-                <div class="nav-pills-container mb-3">
-                    <ul class="nav nav-pills  justify-content-center justify-content-md-start">
-                        <li class="nav-item mr-2">
-                            <a class="nav-link" href="{{url('bill')}}">บิลรับงาน</a>
-                        </li>
-                        <li class="nav-item mr-2">
-                            <a class="nav-link" href="{{url('recent')}}">ดูบิลเก่า</a>
-                        </li>
-                        <li class="nav-item mr-2">
-                            <a class="nav-link active" href="{{url('report')}}">รายงาน</a>
-                        </li>
-                    </ul>
+                <div class="row">
+                    <nav aria-label="breadcrumb">
+                        <ol class="breadcrumb bg-transparent py-0 not-print">
+                            <li class="breadcrumb-item active" aria-current="page">ออกรายงาน</li>
+                        </ol>
+                    </nav>
                 </div>
 
                 <form method="POST" action="{{ url('report') }}" autocomplete="off">
@@ -42,7 +36,6 @@
                                                 <option value="{{$b->id}}" selected>{{$b->name}}</option>
                                             @endforeach
                                         @endif
-
                                     </select>
                                 </div>
                             </div>
@@ -117,7 +110,7 @@
                                         @if($search->search)
                                             @if(isset($search->select) && $search->search)
                                                 <div class="col-12 col-md-6 col-lg-3 mb-4 mb-md-3 form-group">
-                                                    <select id="col{{$i+1}}_filter" class="custom-select custom-select-md column_filter is-null" data-column="{{$i+1}}" data-name="{{$search->name}}">
+                                                    <select id="col{{$i+2}}_filter" class="custom-select custom-select-md column_filter is-null" data-column="{{$i+2}}" data-name="{{$search->name}}">
                                                         <option class="text-muted" value="">ค้นหา​ : {{$search->name}}</option>
                                                         @foreach( $search->select as $r)
                                                             <option value="{{$r->name}}">{{$r->name}}</option>
@@ -126,7 +119,7 @@
                                                 </div>
                                             @else
                                                 <div class="col-12 col-md-6 col-lg-3 mb-4 mb-md-3 form-group">
-                                                    <input id="col{{$i+1}}_filter" class="form-control not-require column_filter" data-column="3" placeholder="ค้นหา​ : {{$search->name}}" data-name="{{$search->name}}" required>
+                                                    <input id="col{{$i+2}}_filter" class="form-control not-require column_filter" data-column="{{$i+2}}" placeholder="ค้นหา​ : {{$search->name}}" data-name="{{$search->name}}" required>
                                                 </div>
                                             @endif
                                         @endif
@@ -134,10 +127,11 @@
                                 </div>
                             </div>
                             <div class="col-12 col-md-11 mb-3 report-container">
-                                <div class="table-responsive table-report">
+                                <div class="table-report table-responsive">
                                     <table id="table" class="table table-hover table-bordered table-report" style="width:100%">
                                         <thead>
                                         <tr>
+                                            <th class="disabled"></th>
                                             <th class="disabled">#</th>
                                             @foreach($report_header as $th)
                                                 <th class="disabled">{{$th->name}}</th>
@@ -146,7 +140,12 @@
                                         </thead>
                                         <tbody>
                                         @foreach($data as $i => $d)
-                                        <tr data-href="{{url('/')}}/bill/update?id=">
+                                        <tr {{ $link ? 'data-href='. url("/") .'/bill/update?id='.$d->bill_id : '' }}>
+                                            <td>
+                                                <a href="{{$link ? (url("/") .'/bill/update?id='.$d->bill_id) : ''}}" class="badge badge-primary badge-icon not-pointer">
+                                                    <span class="oi oi-pencil"></span>
+                                                </a>
+                                            </td>
                                             <td>{{$i+1}}</td>
                                             @foreach($report_header as $th)
                                                 @php($param = $th->field)
@@ -162,6 +161,8 @@
                     </div>
                 </div>
 
+
+
             </div>
         </div>
     </div>
@@ -176,8 +177,7 @@
         $(document).ready(function($) {
 
             $('#table').DataTable({
-                responsive: true,
-                dom: 'Bifrt<"d-flex justify-content-between"lp>',
+                dom: 'Bifrt<"d-flex justify-content-between "lp>',
                 buttons: [
                     {
                         extend: 'print',
@@ -211,22 +211,26 @@
                     }
 
                 ],
-                order: [[ 0, "asc" ]],
+                order: [[ 1, "asc" ]],
                 columnDefs:[
                     {
-                        targets: [0],
+                        targets: [1],
                         width: "20px"
                     },
                     {
                         targets: [-1],
                         className: "dt-right"
                     },
+                    {
+                        targets: [0],
+                        orderable: false
+                    }
                 ],
                 bInfo: true,
                 language: {
                     zeroRecords: "ไม่พบรายการที่ต้องการ",
                     lengthMenu: "แสดง _MENU_ ต่อหน้า",
-                    info: "หน้า _PAGE_ จาก _PAGES_ หน้า (_MAX_ รายการ)",
+                    info: "หน้า _PAGE_ จาก _PAGES_ หน้า (_TOTAL_ รายการ)",
                     infoEmpty: "ไม่พบรายการที่ต้องการ",
                     infoFiltered: "(ค้นหาจาก _MAX_ รายการ)",
                     search: "ค้นหา :",
@@ -334,7 +338,7 @@
             $('tr[data-href]').on("click", function() {
                 let bill_id = $(this).children('.bill-id').text();
                 //console.log(bill_id);
-                document.location = $(this).data('href')+bill_id;
+                document.location = $(this).data('href');
             });
 
             function filterGlobal () {
@@ -362,7 +366,8 @@
                 let date1 = '{{isset($current) ? $current->date_start : $report_date}}';
                 let date2 = '{{isset($current) ? $current->date_end : ''}}';
                 let info = $('#table_info').text();
-                let count_list = info.indexOf("(") == -1 ? '0 รายการ' : info.split('(')[1].slice(0,-1);
+                let count_list = info.indexOf("(") == -1 ? '0' : parseInt(info.split('(')[1]);
+
                 let header1 =
                     '<div class="dt-print-header d-flex align-item-center">' +
                     '<img src="{{ url('/') }}/public/images/jewerly-t.png" />'+
@@ -370,12 +375,12 @@
                     '<h3>'+'{{ isset($current) ? $current->report : 'ยอดรวมงานซ่อม'}}'+'</h3>' +
                     '<p>สาขา : '+'{{ isset($current) ? $current->branch_name : $report_branch }}'+'</p>' +
                     '<p>รายการ : '+ rule +'</p>' +
-                    '<p>ยอดรวม : '+ sum  +' บาท</p>' +
+                    '<p>ยอดรวม : '+ sum  +' {{$unit}}</p>' +
                     '</div>'+
                     '<div class="dt-haed-sub align-self-center ml-auto">'+
                     '<p>ตั้งแต่ : '+ '{{isset($current) ? $current->date_start : $report_date}}' + '</p>'+
                     '<p>จนถึง : '+ '{{isset($current) ? $current->date_end : ''}}' + '</p>'+
-                    '<p>จำนวน : '+ count_list + '</p>'+
+                    '<p>จำนวน : '+ count_list + ' รายการ</p>'+
                     '</div>'+
                     '</div>';
                 let header2 =
@@ -385,11 +390,11 @@
                     '<h3>'+'{{ isset($current) ? $current->report : 'ยอดรวมงานซ่อม'}}'+'</h3>' +
                     '<p>สาขา : '+'{{ isset($current) ? $current->branch_name : $report_branch}}'+'</p>' +
                     '<p>รายการ : '+ rule +'</p>' +
-                    '<p>ยอดรวม : '+ sum  +' บาท</p>' +
+                    '<p>ยอดรวม : '+ sum  +' {{$unit}}</p>' +
                     '</div>'+
                     '<div class="dt-haed-sub align-self-center ml-auto">'+
                     '<p>วันที่ : '+ '{{isset($current) ? $current->start : $report_date}}' + '</p>'+
-                    '<p>จำนวน : '+ count_list + '</p>'+
+                    '<p>จำนวน : '+ count_list + ' รายการ</p>'+
                     '</div>'+
                     '</div>';
 
@@ -409,7 +414,6 @@
                     .replace(/(\d)(?=(\d{3})+\.)/g, "$1,")
                     .toString()
             }
-
 
         })
     </script>

@@ -21,6 +21,8 @@ class CreateCustomerTable extends Migration
             $table->string('address')->nullable();
             $table->string('line')->nullable();
             $table->integer('activate');
+            $table->integer('increment');
+            $table->integer('already_used');
             $table->timestamps();
         });
     }

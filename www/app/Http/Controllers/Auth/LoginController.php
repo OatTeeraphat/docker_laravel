@@ -88,6 +88,22 @@ class LoginController extends Controller
 
     }
 
+    public function logoutUsingID(Request $request){
+
+        $id = Auth::user()->id;
+        $user = User::find($id);
+        $user->status = 0;
+        $user->save();
+
+        auth()->logout();
+        $this->guard()->logout();
+
+        $request->session()->invalidate();
+
+        return redirect('/');
+
+    }
+
     public function checkHasPin(Request $request)
     {
         $data = explode('!',$request->data);

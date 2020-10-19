@@ -3,7 +3,7 @@
 @section('content')
     <div class="container">
         <div class="row justify-content-center">
-            <div class="col-md-10">
+            <div class="col-12">
                 @if(Session::has('success'))
                     <div class="alert alert-success" role="alert">
                         <span class="oi oi-check"></span> {{ Session::get('success') }}
@@ -361,7 +361,7 @@
                     <button type="button" class="btn btn-primary btn-lg" id="submit-add"
                             onclick="event.preventDefault();
                         document.getElementById('form-add-table').submit();"
-                    >เพิ่มตัวเลือก</button>
+                    >แก้ไขตัวเลือก</button>
                     <button type="button" class="btn btn-secondary btn-lg" data-dismiss="modal">ยกเลิก</button>
                 </div>
             </div>

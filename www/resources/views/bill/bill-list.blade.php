@@ -11,8 +11,8 @@
 
         <div class="col-md-12">
 
-            <div class="nav-pills-container mb-3">
-                <ul class="nav nav-pills justify-content-center justify-content-md-start">
+            <div class="nav-pills-container mb-3 not-print">
+                <ul class="nav nav-pills  justify-content-center justify-content-md-start">
                     <li class="nav-item mr-2">
                         <a class="nav-link" href="{{url('bill')}}">บิลรับงาน</a>
                     </li>
@@ -20,7 +20,7 @@
                         <a class="nav-link active" href="{{url('recent')}}">ดูบิลเก่า</a>
                     </li>
                     <li class="nav-item mr-2">
-                        <a class="nav-link" href="{{url('report')}}">รายงาน</a>
+                        <a class="nav-link" href="{{url('summary')}}">สรุปรายวัน</a>
                     </li>
                 </ul>
             </div>
@@ -41,6 +41,33 @@
                 </div>
             </div>
             @endif
+
+
+            <div class="col-12 col-md-11 mb-3 report-container">
+                <div class="table-report table-responsive">
+                    <table id="table" class="table table-hover table-bordered table-report" style="width:100%">
+                        <thead>
+                        <tr>
+                            <th class="disabled">#</th>
+                            @foreach($report_header as $th)
+                                <th class="disabled">{{$th->name}}</th>
+                            @endforeach
+                        </tr>
+                        </thead>
+                        <tbody>
+                        @foreach($data as $i => $d)
+                            <tr {{ $link ? 'data-href='. url("/") .'/bill/update?id='.$d->bill_id : '' }}>
+                                <td>{{$i+1}}</td>
+                                @foreach($report_header as $th)
+                                    @php($param = $th->field)
+                                    <td {{$param == 'bill_id' ? 'class=bill-id' : ''}}>{{$d->$param}}</td>
+                                @endforeach
+                            </tr>
+                        @endforeach
+                        </tbody>
+                    </table>
+                </div>
+            </div>
 
             <div id="feedContainer"></div>
             <div id="ajax_load" class="row justify-content-center">
@@ -70,16 +97,17 @@
                 $(window).trigger('scroll')
             });
 
-            $(window).scroll(function() {
-                if($(window).scrollTop() + $(window).height() >= $(document).height()) {
-                    @if($role < 4)
+            $(window).on('scroll', function (e) {
+                if($(window).scrollTop() + window.innerHeight >= $(document).height()) {
+                    @if(!$role < 4)
                         branch_id = 0;
                     @else
+                        $('#ajax_load').show();
                         branch_id = $('select[name="branch_id"]').val();
                     @endif
                     loadMoreData(branch_id) ? $('#ajax_nomore').hide() : $('#ajax_load').hide();
                 }
-            });
+            })
 
             @if($role === 4)
             $('select[name="branch_id"]').on('change',function () {
@@ -91,6 +119,7 @@
             @endif
 
             function loadMoreData(branch) {
+                $('#ajax_load').show();
                 $.ajaxSetup({
                     headers: {
                         'X-CSRF-TOKEN': $('meta[name="csrf-token"]').attr('content')
@@ -106,7 +135,7 @@
                     dataType: 'JSON',
                     beforeSend: function()
                     {
-                        $('#ajax_nomore').hide()
+                        $('#ajax_load').show();
                     },
                     success : function(res){
                         if(res.length !== 0){
@@ -115,11 +144,11 @@
                                 return cardBox(data,index_);
                             });
                             paginateNum +=1;
-                            $('#ajax_load').hide();
-                            $('#ajax_nomore').show()
+
                         }
                     },
                     complete: function(){
+                        $('#ajax_nomore').show()
                         return false;
                     },
                     error: function(){
@@ -151,9 +180,9 @@
                                 '<div class="row">' +
                                     '<div class="col-md-3 col-6 mb-2">' +
                                         '<select class="custom-select" id="table_select'+index+'">' +
-                                            '<option value="">ทั้งหมด</option>'+
-                                            '<option value="ยังไม่ปิดบิล">ยังไม่ปิดบิล</option>' +
+                                            '<option value="ยังไม่ปิดบิล" selected>ยังไม่ปิดบิล</option>' +
                                             '<option value="ปิดบิลแล้ว">ปิดบิลแล้ว</option>' +
+                                            '<option value="">ทั้งหมด</option>'+
                                         '</select>' +
                                     '</div>'+
                                     '<div class="col-md-9 col-6 mt-2 d-none d-md-block">' +
@@ -165,22 +194,32 @@
                                         '<thead>'+
                                             '<tr>'+
                                                 '<th scope="col" class="disabled">เลขที่บิล</th>' +
+                                                '<th scope="col" class="disabled">รูป</th>' +
                                                 '<th scope="col" class="disabled">ประเภท</th>' +
                                                 '<th scope="col" class="disabled">ลูกค้า</th>' +
-                                                '<th scope="col" class="disabled">โทรศัพท์</th>' +
+                                                '<th scope="col" class="disabled">ยอดรวม</th>' +
+                                                '<th scope="col" class="disabled">ใช้ทอง</th>' +
                                                 '<th scope="col" class="disabled">ส่งงาน</th>' +
-                                                '<th scope="col" class="disabled">ชำระ</th>' +
+                                                '<th scope="col" class="disabled">ชำระแล้ว</th>' +
                                                 '<th scope="col" class="disabled">ปิดบิล</th>'+
                                                 '<th scope="col" class="d-none">สถานะ</th>'+
                                             '</tr>'+
                                         '</thead>'+
                                             data.map(function (row) {
-                                                //console.log(row)
+                                                console.log(row)
+                                                let img_part = row.image_part !== null
+                                                        ? ((row.image_part).split(",")[0]) !== '' ?
+                                                                '{{url("/") }}/public/images/job/' +(row.image_part).split(",")[0]
+                                                            :   '{{url("/") }}/public/images/job/' +(row.image_part).split(",")[1]
+                                                        :  '{{url("/") }}/public/img/' + 'noimg.png'
+                                                //console.log(img_part)
                                                 let elm = '<tr data-href="{{url("/")}}/bill/update?id='+row.bill_id+'" class="has-link">'+
-                                                    '<td>'+row.bill_id+'</td>' +
+                                                    '<td class="bill-id">'+row.bill_id+'</td>' +
+                                                    '<td class="bill-id"><div class="img-fit" style="background: url('+ img_part +')"></div></td>' +
                                                     '<td class="text-center">'+ (row.job_type === '1' ? 'งานซ่อม' : ( row.job_type === '2' ? 'แกะสลัก' : 'อื่นๆ' ) ) +'</td>' +
                                                     '<td>'+row.customer[0].name+'<small> ('+row.customer[0].customer_type+')</small></td>' +
-                                                    '<td>'+(row.customer[0].phone !== null ? row.customer[0].phone : "-" )+'</td>' +
+                                                    '<td class="money-format">'+(sumCost(row.order) + sumCost(row.part)) +'</td>' +
+                                                    '<td>'+(sumGold(row.gold))+'</td>' +
                                                     '<td class="text-center" >'+(
                                                         row.deliver  === 1 ? '<span class="oi oi-circle-check"></span>'
                                                             : '<span class="oi oi-circle-x"></span>'
@@ -215,12 +254,16 @@
                     order: [[ 0, "desc" ]],
                     columnDefs:[
                         {
-                            targets: [-1, -2, -3,-4],
-                            width: "40px"
+                            targets: [6,7,8],
+                            width: "20px"
                         },
                         {
-                            targets: [0,3],
+                            targets: [3],
                             width: "110px"
+                        },
+                        {
+                            targets: [0],
+                            width: "135px"
                         },
                         {
                             targets: [1],
@@ -231,8 +274,18 @@
                     bInfo: false,
                     language: {
                         zeroRecords: "ไม่พบบิลที่ต้องการ จากทั้งหมด " +data.length+ " รายการ"
+                    },
+                    oSearch: {sSearch: "ยังไม่ปิดบิล" },
+                    fnDrawCallback: function () {
+
+                        $('tr[data-href]').click(function () {
+                            var href = $(this).data('href')
+                            document.location.href = href
+                        })
+
                     }
                 });
+
 
                 $('#table_select'+index).on('change',function () {
                     let value = $(this).val();
@@ -240,14 +293,48 @@
                     $('#tableCount'+index).text(tab.$('tr', {"filter":"applied"}).length)
                 })
 
+                $('#table_select'+index).trigger('change');
+
                 $('.dataTables_filter').parent().parent().hide();
 
-                $('tr[data-href]').on("click", function() {
-                    //console.log($(this).data('href'));
-                    document.location = $(this).data('href');
+                $('tr[data-href]').on("click","tbody tr", function() {
+                    let bill_id = $(this).data();
+                    console.log(bill_id);
+                    //document.location = $(this).data('href');
                 });
 
             }
+
+
+            function sumCost(data){
+                let cost = 0
+                if (data.length > 0) {
+                    data.map(function (row) {
+                        cost += row.price
+                    })
+                }
+                return cost
+            }
+
+            function sumGold(data){
+                let cost = 0
+                if (data.length > 0) {
+                    data.map(function (row) {
+                        cost += row.value
+                    })
+                }
+                return formatMoney(cost)
+            }
+
+            function formatMoney(value){
+                //console.log(value)
+                return parseFloat(value, 10)
+                    .toFixed(2)
+                    .replace(/(\d)(?=(\d{3})+\.)/g, "$1,")
+                    .toString()
+            }
+
+
 
         })
 

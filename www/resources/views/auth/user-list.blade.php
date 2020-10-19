@@ -3,7 +3,7 @@
 @section('content')
     <div class="container">
         <div class="row justify-content-center">
-            <div class="col-md-10">
+            <div class="col-12">
 
                 <div class="row">
                     <nav aria-label="breadcrumb">
@@ -40,7 +40,7 @@
                             <div class="col-12">
                                 <div class="table-responsive"></div>
                                 <input type="password" class="d-none" />
-                                <table id="Table" class="table table-striped table-bordered">
+                                <table id="Table" class="table table-striped table-bordered table-report">
                                     <thead>
                                     <tr>
                                         <th scope="col">#</th>
@@ -72,7 +72,7 @@
                                             <td><a href="" id="{{ $i+1 }}" class="badge badge-danger badge-icon" data-toggle="modal" data-target="#exampleModal"  data-id='{{ $user->id }}' data-path='{{ url('user/delete?id=') }}'>
                                                     <span class="oi oi-trash" id="{{ $i+1 }}"></span></a>
                                             </td>
-                                            <td><a href="#" class="badge {{ $user->status == 0 ? 'badge-secondary' : 'badge-success' }} badge-icon">
+                                            <td><a href="" class="badge {{ $user->status == 0 ? 'badge-secondary' : 'badge-success' }} badge-icon not-pointer">
                                                     <span class="oi oi-power-standby"></span></a>
                                             </td>
                                         </tr>

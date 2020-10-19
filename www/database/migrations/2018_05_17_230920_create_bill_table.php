@@ -22,6 +22,7 @@ class CreateBillTable extends Migration
             $table->integer( 'deliver');
             $table->integer( 'pay');
             $table->integer( 'status');
+            $table->integer( 'allow_zero');
             $table->string( 'job_type');
             $table->string('bill_id');
             $table->string('image_part')->nullable();
@@ -38,7 +39,7 @@ class CreateBillTable extends Migration
             $table->integer( 'cause_id')->nullable()->unsigned()->index();
             $table->foreign('cause_id')->references('id')->on('cause')->onDelete('cascade');
 
-            $table->double( 'gold')->nullable();
+            $table->integer( 'gold')->nullable();
 
             $table->integer( 'craft_id')->nullable()->unsigned()->index();
             $table->foreign('craft_id')->references('id')->on('craft')->onDelete('cascade');

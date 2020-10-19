@@ -25,6 +25,8 @@ class CustomerTableSeeder extends Seeder
             'address' => '-',
             'line' => '-',
             'activate' => 1,
+            'increment' => 0,
+            'already_used' => 1
         ]);
 
         $customer2 = Customer::create([
@@ -34,6 +36,8 @@ class CustomerTableSeeder extends Seeder
             'address' => '',
             'line' => 'chatchai',
             'activate' => 1,
+            'increment' => 0,
+            'already_used' => 1
         ]);
 
         $customer3 = Customer::create([
@@ -43,6 +47,8 @@ class CustomerTableSeeder extends Seeder
             'address' => '37/2 Suthisarnvinijchai Rd., Samseannok, Huaykwang 10320 Bangkok, Thailand',
             'line' => 'jewclub',
             'activate' => 1,
+            'increment' => 0,
+            'already_used' => 1
         ]);
 
         //$this->command->info('Seeding Customer Complete!!');

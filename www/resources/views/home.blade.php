@@ -12,11 +12,18 @@
             $part = $billData[0]->part;
             $role = Auth::user()->roles[0]->level;
             $user = Auth::user();
+            $allow_zero = $billData[0]->allow_zero;
             //var_dump($imagePart);
             //var_dump($payment);
             //var_dump($imagePart);
             //echo $bill;
+            //var_dump($gold_data);
+            //dd($bill);
         }
+
+
+
+        $role = Auth::user()->roles[0]->level;
 
         function jobTable($order, $j, $a)
         {
@@ -67,25 +74,25 @@
 
 <div class="container">
     <div class="row justify-content-center">
-
         <div class="col-md-12">
 
-            <div class="nav-pills-container mb-3">
+            <div class="nav-pills-container mb-3 not-print">
                 <ul class="nav nav-pills  justify-content-center justify-content-md-start">
                     <li class="nav-item mr-2">
-                        <a class="nav-link active shadow-sm" href="{{url('bill')}}">บิลรับงาน</a>
+                        <a class="nav-link active" href="{{url('bill')}}">บิลรับงาน</a>
                     </li>
                     <li class="nav-item mr-2">
                         <a class="nav-link" href="{{url('recent')}}">ดูบิลเก่า</a>
                     </li>
                     <li class="nav-item mr-2">
-                        <a class="nav-link" href="{{url('report')}}">รายงาน</a>
+                        <a class="nav-link" href="{{url('summary')}}">สรุปรายวัน</a>
                     </li>
                 </ul>
             </div>
 
-            <form method="POST" id="create_main" action="{{ url('bill') }}" enctype="multipart/form-data" autocomplete="off" class="needs-validation" novalidate>
 
+
+            <form method="POST" id="create_main" action="{{ url('bill') }}" enctype="multipart/form-data" role="presentation" class="needs-validation" novalidate autocomplete="disabled" readonly>
                 @csrf
                 <input type="text" name="type" class="d-none" value="{{ $type }}" readonly>
                 <input type="text" name="bill_id" class="d-none" value="{{ isset($bill) ? $bill->id : '' }}" readonly>
@@ -101,8 +108,12 @@
                 <input type="text" name="cash_val" class="d-none" readonly>
                 <input type="text" name="cost_data" class="d-none" value="{{ isset($costData) ? $costData : '' }}" readonly>
                 <input type="text" name="cost_current" class="d-none" readonly>
-                <input type="text" name="gold" class="d-none" readonly>
+                <input type="text" name="gold_status" class="d-none money-format" value="{{ isset($bill->gold) ? $bill->gold : '' }}" readonly>
+                <input type="text" name="gold" class="d-none money-format" value="{{ isset($gold_data->gold_1) ? $gold_data->gold_1->value : '' }}" readonly>
+                <input type="text" name="gold2" class="d-none money-format" value="{{ isset($gold_data->gold_2) ? $gold_data->gold_2->value : '' }}" readonly>
                 <input type="text" name="craft_id" class="d-none" readonly>
+                <input type="text" name="close_bill" class="d-none" readonly>
+                <input type="text" name="deliver_material" class="d-none" value="{{!isset($materialData) ?: $materialData}}" readonly>
 
                 <div class="alert alert-success" role="alert" style="display: none; width: 100%">
                     <span class="oi oi-check"></span>
@@ -209,7 +220,8 @@
                             <div class="form-group row required">
                                 <label for="name" class="col-12">ชื่อลูกค้า/ชื่อห้างร้าน</label>
                                 <div class="col-12">
-                                    <input id="name" name="name" value="{{ isset($customer) ? $customer->name : '' }}" class="form-control{{ $errors->has('customer_name') ? ' is-invalid' : '' }} readonly-w {{dForm($bill) !== null ? 'desc' : ''}}" required autofocus {{dForm($bill)}}>
+                                    <input id="name" name="name" type="text" value="{{ isset($customer) ? $customer->name : '' }}" class="form-control{{ $errors->has('customer_name') ? ' is-invalid' : '' }} secure readonly-w {{dForm($bill) !== null ? 'desc' : ''}}" required autofocus {{dForm($bill)}} >
+                                    <input id="username" name="username" type="text" value="" class="disapear"  >
                                     <span id="loader-name"><img src="{{ URL::asset('/public/img/loading.gif') }}"></span>
                                     <button type="button" class="badge badge-primary btn" id="search-name" style="display: none;">ค้นหา</button>
                                     @if(!isset($bill) or (isset($bill) and $bill->deliver === 0) or (isset($bill) and $role === 4))
@@ -262,7 +274,21 @@
                     <div class="row justify-content-center">
                         <div class="col-12 col-lg-10 mt-3 mb-2">
                             <div class="form-group row required">
-                                <label for="table_job" class="col-12">รายการงานซ่อม</label>
+                                <div class="col-12">
+                                    <div class="row">
+                                        <div class="col-12 col-md-6 px-0">
+                                            <label for="table_job" class="col-12">รายการงานซ่อม</label>
+                                        </div>
+                                        <div class="col-12 col-md-6 px-0">
+                                        @if($role == 4)
+                                            <div class="form-check form-check-inline float-md-right">
+                                                <input class="form-check-input" type="checkbox" id="allow_zero" name="allow_zero" value="1" {{isset($bill) ? ($allow_zero == 1 ? 'checked': '') : ''}}>
+                                                <label class="form-check-label n-require" for="allow_zero">ยอมรับค่า 0 ได้</label>
+                                            </div>
+                                        @endif
+                                        </div>
+                                    </div>
+                                </div>
                                 <div class="col-12">
                                     <input type="password" class="d-none" />
                                     <div class="table-responsive">
@@ -273,11 +299,11 @@
                                                     <tr>
                                                         <th class="static disabled" width="{{ 100/$count_a }}%"></th>
                                                         @foreach ($amulet as $i => $a)
-                                                        <th class="disabled" width="{{ 100/$count_a }}%" data-amulet="{{$a->id}}" id="amulet-{{$a->id}}">
+                                                        <th class="disabled text-center" width="{{ 100/$count_a }}%" data-amulet="{{$a->id}}" id="amulet-{{$a->id}}">
                                                             {{$a->name}}
                                                         </th>
                                                         @endforeach
-                                                        <th class="disabled" width="{{ (100/$count_a)+2 }}%">ยอดเงิน</th>
+                                                        <th class="disabled text-center" width="{{ (100/$count_a)+2 }}%">ยอดเงิน</th>
                                                     </tr>
                                                     </thead>
                                                     <tbody class="sorted_body">
@@ -302,7 +328,7 @@
                                                                     </div>
                                                                 </td>
                                                             @endforeach
-                                                            <td class="td-job">
+                                                            <td class="td-job summary">
                                                                 <input type="text" data-hook-cost-job="{{$j->id}}" class="input-job text-right cost-job" readonly>
                                                             </td>
                                                         </tr>
@@ -312,6 +338,7 @@
                                             </div>
                                         </div>
                                     </div>
+
                                     <span class="invalid-feedback"  id="table_error" style="display: none;">
                                         <strong>กรุณาระบุ ราคาและงานซ่อมให้ครบถ้วน</strong>
                                     </span>
@@ -373,6 +400,49 @@
                         </div>
                     </div>
 
+                    @if(isset($type) && $type == 'update')
+                    <div class="row justify-content-center">
+                        <div class="col-md-10 col-lg-8 mt-2">
+                            <div class="form-group row">
+                                <div class="col-12">
+                                    <div class="custom-control custom-checkbox">
+                                        <input type="checkbox" class="custom-control-input" {{ isset($bill->gold) ? ( $bill->gold == 0 ? 'checked' : '' ) : ''}}
+                                        id="gold_input_check" name="gold_input_check" {{isset($bill) && $bill->status == 1 && $role !== 4 ? 'disabled' : ''}}>
+                                        <label class="custom-control-label" for="gold_input_check"><strong>บิลนี้ไม่ใช้ทอง</strong></label>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-10 col-lg-8" id="gold_input">
+                            <div class="form-group row">
+                                <label for="service_cost" class="col-12">ยอดใช้ทอง</label>
+                                <div class="col-12">
+                                    <div class="row">
+                                        <div class="col-12 col-md-9 col-lg-9">
+                                            <input id="gold_value" type="text" maxlength="12" class="cost form-control money-format" name="gold_value"
+                                                    readonly>
+                                            <span class="invalid-feedback">
+                                        </span>
+                                        </div>
+                                        <div class="col-12 col-md-3 col-lg-3 mt-2 mt-md-0">
+                                            @if(isset($bill) && $bill->status == 1 && $role !== 4)
+                                            <button type="button" class="btn btn-primary btn-lg" data-toggle="modal" id="modalGold_" data-target="#modalGold">
+                                                ดูยอดทอง
+                                            </button>
+                                            @else
+                                            <button type="button" class="btn btn-primary btn-lg" data-toggle="modal" id="modalGold_" data-target="#modalGold">
+                                                ลงยอดทอง
+                                            </button>
+                                            @endif
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                    </div>
+                    @endif
+
                     <div class="row justify-content-center">
                         <div class="col-md-10 col-lg-8">
                             <div class="form-group row">
@@ -404,20 +474,25 @@
                     <div class="row justify-content-center">
                         <div class="col-md-10 col-lg-8">
                             <div class="form-group row">
-                                <label for="service_cost" class="col-12">รับชำระ</label>
+                                <label for="service_cost" class="col-12">รับชำระแล้ว</label>
                                 <div class="col-12">
                                     <div class="row">
-                                    <div class="col-12 col-md-9 col-lg-10">
+                                    <div class="col-12 col-md-9 col-lg-9">
                                         <input id="cash" type="text" maxlength="12" class="cost form-control{{ $errors->has('cash') ? ' is-invalid' : '' }} money-format" name="cash"
                                                value="{{ isset($bill) ? $bill->cash : '0.00'}}" readonly>
                                         <span class="invalid-feedback">
                                         </span>
                                     </div>
-                                    <div class="col-12 col-md-3 col-lg-2 mt-2 mt-md-0">
-                                        <button type="button" class="btn btn-primary btn-lg" id="modalCash-btn" data-toggle="modal" data-target="#modalCash"
-                                            {{ isset($bill) && $role < 4 ? (( $bill->pay == 1 ) ? 'disabled' : ( $bill->status == 1 ? 'disabled' : '' )) : '' }}>
-                                            ชำระเงิน
-                                        </button>
+                                    <div class="col-12 col-md-3 col-lg-3 mt-2 mt-md-0">
+                                        @if(isset($bill) && $bill->status == 1 && $role !== 4)
+                                            <button type="button" class="btn btn-primary btn-lg" id="modalCash-btn" data-toggle="modal" data-target="#modalPayHistory">
+                                                ประวัติชำระ
+                                            </button>
+                                        @else
+                                            <button type="button" class="btn btn-primary btn-lg" id="modalCash-btn" data-toggle="modal" data-target="#modalCash">
+                                                ชำระเงิน
+                                            </button>
+                                        @endif
                                     </div>
                                     </div>
                                 </div>
@@ -458,18 +533,18 @@
                     <div class="row justify-content-center" id="btm-button">
                         <div class="col-12 text-center">
                         @if (Request::is('bill'))
-                            <button type="button" class="btn btn-primary btn-lg mr-2 col-12 col-md-4 col-lg-2 mb-2 mb-md-0" id="btn-submit">ยืนยัน เปิดบิลรับงาน</button>
-                            <button type="button" class="btn btn-secondary btn-lg col-12 col-md-4 col-lg-2" onclick="//this.form.reset();">รีเซ็ตข้อมูล</button>
+                            <button type="button" class="btn btn-primary btn-lg mr-2 col-12 col-md-4 col-lg-2 mb-2 mb-md-0" id="btn-submit">เปิดบิลรับงาน</button>
+                            <button type="button" class="btn btn-secondary btn-lg col-12 col-md-4 col-lg-2" onclick="location.reload();">รีเซ็ตข้อมูล</button>
                         @elseif(($bill->status == 1 or $bill->status == 2) and $role === 4)
-                            <button type="button" class="btn btn-primary btn-lg mr-2 col-12 col-md-4 col-lg-2 mb-2 mb-md-0" id="btn-submit" {{ dAdmin($bill) and $role === 4 ? 'disabled' : ''}}>บันทึกแก้ไข</button>
-                            <button type="button" class="btn btn-primary btn-lg mr-2 col-12 col-md-3 col-lg-2 mb-2 mb-md-0" id="btn-print" data-href="{{url('/recent/bill?id=')}}{{ isset($bill) ? $bill->bill_id : '' }}" >พิมพ์บิลนี้</button>
+                            <button type="button" class="btn btn-primary btn-lg mr-2 col-12 col-md-4 col-lg-2 mb-2 mb-lg-0" id="btn-submit" {{ dAdmin($bill) and $role === 4 ? 'disabled' : ''}}>บันทึกแก้ไข</button>
+                            <button type="button" class="btn btn-primary btn-lg mr-2 col-12 col-md-4 col-lg-2 mb-2 mb-lg-0" id="btn-print" data-href="{{url('/recent/bill?id=')}}{{ isset($bill) ? $bill->bill_id : '' }}" >พิมพ์บิลนี้</button>
                         @elseif($bill->status == 1 or $bill->status == 2)
-                            <button type="button" class="btn btn-primary btn-lg mr-2 col-12 col-md-3 col-lg-2 mb-2 mb-md-0" id="btn-print" data-href="{{url('/recent/bill?id=')}}{{ isset($bill) ? $bill->bill_id : '' }}" >พิมพ์บิลนี้</button>
+                            <button type="button" class="btn btn-primary btn-lg mr-2 col-12 col-md-4 col-lg-2 mb-2 mb-lg-0" id="btn-print" data-href="{{url('/recent/bill?id=')}}{{ isset($bill) ? $bill->bill_id : '' }}" >พิมพ์บิลนี้</button>
                         @else
-                            <button type="button" class="btn btn-primary btn-lg mr-2 col-12 col-md-3 col-lg-2 mb-2 mb-md-0" id="btn-submit" {{ dAdmin($bill) && $role !== 4 ? 'disabled' : ''}}>บันทึกแก้ไข</button>
-                            <button type="button" class="btn btn-primary btn-lg mr-2 col-12 col-md-3 col-lg-2 mb-2 mb-md-0" id="btn-modal-deliver" {{dAdmin($bill) ? 'disabled' : ''}}>ส่งงานลูกค้า</button>
-                            <button type="button" class="btn btn-primary btn-lg mr-2 col-12 col-md-3 col-lg-2 mb-2 mb-md-0" id="btn-modal-success" {{dAdmin($bill) ? '' : 'disabled'}}>ปิดบิล</button>
-                            <button type="button" class="btn btn-primary btn-lg mr-2 col-12 col-md-3 col-lg-2 mb-2 mb-md-0" id="btn-print" data-href="{{url('/recent/bill?id=')}}{{ isset($bill) ? $bill->bill_id : '' }}" >พิมพ์บิลนี้</button>
+                            <button type="button" class="btn btn-primary btn-lg mr-2 col-12 col-md-4 col-lg-2 mb-2 mb-lg-0" id="btn-submit" {{ dAdmin($bill) && $role < 3 ? 'disabled' : ''}}>บันทึกแก้ไข</button>
+                            <button type="button" class="btn btn-primary btn-lg mr-2 col-12 col-md-4 col-lg-2 mb-2 mb-lg-0" id="btn-modal-deliver" {{dAdmin($bill) ? 'disabled' : ''}}>ส่งงานลูกค้า</button>
+                            <button type="button" class="btn btn-primary btn-lg mr-2 col-12 col-md-4 col-lg-2 mb-2 mb-lg-0" id="btn-close-success" {{dAdmin($bill) ? '' : 'disabled'}}>ปิดบิล</button>
+                            <button type="button" class="btn btn-primary btn-lg mr-2 col-12 col-md-4 col-lg-2 mb-2 mb-lg-0" id="btn-print" data-href="{{url('/recent/bill?id=')}}{{ isset($bill) ? $bill->bill_id : '' }}" >พิมพ์บิลนี้</button>
                             @if ($bill->deliver == 1 and $role > 2)
                             <button type="button" class="btn btn-danger btn-lg mr-2 col-12 col-md-auto mb-2 mb-md-0" id="btn-modal-billvoid" {{dAdmin($bill) ? '' : 'disabled'}}>
                                 <span class="d-md-none">ยกเลิกบิล</span>
@@ -491,17 +566,17 @@
                         <div class="modal-content">
                             <div class="modal-body">
                                 <div class="row justify-content-center">
-                                    <div class="col-md-10">
-                                        <div class="alert alert-danger mt-1 mt-md-3 mb-2" id="alert-payment" role="alert" style="display: none; width: 100%">
+                                    <div class="col-md-11">
+                                        <div class="alert alert-danger mt-1 mt-md-3 mb-0" id="alert-payment" role="alert" style="display: none; width: 100%">
                                             <span class="oi oi-check"></span>
                                         </div>
                                     </div>
                                 </div>
                                 <div class="row justify-content-center">
-                                    <div class="col-md-5 order-md-2 mt-md-4 mt-md-4 mt-1">
+                                    <div class="col-md-5 order-md-2 mt-md-3 mt-1 mb-0">
                                         <h4 class="d-flex justify-content-between align-items-center mb-3">
                                             <span>ยอดรวม</span>
-                                            <span class="text-primary" id="pay_total_"><h4 class="mb-0"><strong></strong></h4></span>
+                                            <span class="text-primary" id="pay_total_"><h4 class="mb-0" style="font-size: 1.2em"><strong></strong></h4></span>
                                         </h4>
                                         <ul class="list-group mb-3">
                                             <li class="list-group-item d-flex justify-content-between lh-condensed">
@@ -530,38 +605,52 @@
                                                 <strong id="payment-method-total">0.00</strong>
                                             </li>
                                             <li class="list-group-item d-flex justify-content-between bg-light">
-                                                <span>คงเหลือ</span>
+                                                <span>ค้างชำระ</span>
                                                 <strong id="payment-remain">0.00</strong>
                                             </li>
                                         </ul>
                                         <small class="text-danger">* รายการชำระจะบันทึก หลังจากบันทึกข้อมูลบิลสำเร็จ</small>
 
                                     </div>
-                                    <div class="col-md-5 order-md-1 mt-md-4 mt-md-4 mt-3">
+                                    <div class="col-md-6 order-md-1 mt-md-3 mt-3">
                                         <h4 class="d-flex justify-content-between align-items-center mb-3">
                                             ชำระด้วย
                                         </h4>
                                         <hr class="mb-4">
-                                        <div class="form-group">
-                                            <label for="pay_cash">เงินสด</label>
+                                        <div class="form-group input-group mb-4">
+                                            <div class="input-group-prepend bg-light">
+                                                <span class="input-group-text">เงินสด</span>
+                                            </div>
                                             <input type="text" class="money-format form-control payment-method not-require text-right font-weight-bold" name="pay_cash" class="form-control">
                                         </div>
 
-                                        <div class="form-group">
-                                            <label for="pay_credit">บัตรเครดิต</label>
+                                        <div class="form-group input-group mb-4">
+                                            <div class="input-group-prepend bg-light">
+                                                <span class="input-group-text">บัตรเครดิต</span>
+                                            </div>
                                             <input type="text" class="money-format form-control payment-method not-require text-right font-weight-bold" name="pay_credit" class="form-control">
                                         </div>
 
-                                        <div class="form-group">
-                                            <label for="pay_online">ออนไลน์</label>
-                                            <input type="text" class="money-format form-control payment-method not-require text-right font-weight-bold" name="pay_online" class="form-control">
+                                        <div class="form-group input-group mb-4">
+                                            <div class="input-group-prepend bg-light">
+                                                <span class="input-group-text">Voucher</span>
+                                            </div>
+                                            <input type="text" class="money-format form-control payment-method not-require text-right font-weight-bold" name="pay_voucher" class="form-control">
                                         </div>
 
-                                        <div class="form-group">
-                                            <label for="pay_coupon">คูปอง</label>
+                                        <div class="form-group input-group mb-4">
+                                            <div class="input-group-prepend bg-light">
+                                                <span class="input-group-text">คูปอง</span>
+                                            </div>
                                             <input type="text" class="money-format form-control payment-method not-require text-right font-weight-bold" name="pay_coupon" class="form-control">
                                         </div>
 
+                                        <div class="form-group input-group mb-4">
+                                            <div class="input-group-prepend bg-light">
+                                                <span class="input-group-text">QR code</span>
+                                            </div>
+                                            <input type="text" class="money-format form-control payment-method not-require text-right font-weight-bold" name="pay_online" class="form-control">
+                                        </div>
 
                                     </div>
                                 </div>
@@ -573,6 +662,103 @@
                         </div>
                     </div>
             </div>
+
+            <div class="modal fade" id="modalGold" tabindex="-1" role="dialog" aria-labelledby="modalGold" aria-hidden="true" data-keyboard="false" data-backdrop="static">
+
+                    <div class="modal-dialog modal-pay modal-lg" role="document">
+                        <div class="modal-content">
+                            <div class="modal-body pt-4">
+                                <div class="row justify-content-center my-md-2 mb-2">
+                                    <div class="col-12 col-md-11">
+                                        <h4>ยอดใช้ทอง (ช่างคนที่ 1)</h4>
+                                        <hr>
+                                        <div class="form-group row required">
+                                            <div class="col-12 col-md-6">
+                                                <label for="gold">น้ำหนักทองที่ใช้</label>
+                                                <div class="input-group input-group-lg">
+                                                    <input type="text" class="money-format form-control not-require text-right sucess-element" name="gold_" id="gold" class="form-control" value="{{ isset($gold_data->gold_1) ? $gold_data->gold_1->value : '' }}"
+                                                    {{isset($bill) && $bill->status == 1 && $role !== 4 ? 'readonly' : ''}}>
+                                                    <input type="text" class="d-none" name="gold_id_" value="{{ isset($gold_data->gold_1) ? $gold_data->gold_1->id : '' }}">
+                                                    <div class="input-group-append">
+                                                        <span class="input-group-text">กรัม</span>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                            <div class="col-12 col-md-6">
+                                                <label for="craft_id">ช่างทอง</label>
+                                                <select class="custom-select custom-select-lg sucess-element" id="craft_id_" name="craft_id_"
+                                                    {{isset($bill) && $bill->status == 1 && $role !== 4 ? 'disabled' : ''}}>
+                                                    <option value="" selected disabled hidden >กรุณาระบุช่างทอง</option>
+                                                    @if(isset($craft))
+                                                        @foreach($craft as $l)
+                                                            <option value="{{$l['id']}}" {{ isset($gold_data->gold_1) ?
+                                                                                         ( $gold_data->gold_1->craft_id == $l['id'] ? 'selected' : '')
+                                                                                         : '' }}
+                                                            >
+                                                                {{$l['name']}}
+                                                            </option>
+                                                        @endforeach
+                                                    @else
+                                                        <option value="" hidden disabled>ไม่พบช่างทองในสาขา</option>
+                                                    @endif
+                                                </select>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="row justify-content-center">
+                                    <div class="col-12 col-md-11">
+                                        <h4>ยอดใช้ทอง (ช่างคนที่ 2)
+                                            <button type="button" class="badge badge-primary border-0 float-right mb-0 pt-0 mt-2 {{isset($gold_data->gold_2) ? 'd-none' : ''}} cursor-pointer" id="gold_second_toggle"
+                                                    {{isset($bill) && $bill->status == 1 && $role !== 4 ? 'disabled' : ''}}>เพิ่มช่าง 2</button>
+                                            <button type="button" class="badge badge-danger border-0 float-right mb-0 pt-0 mt-2 {{isset($gold_data->gold_2) ?: 'd-none'}} cursor-pointer" id="gold_second_toggle_"
+                                                    {{isset($bill) && $bill->status == 1 && $role !== 4 ? 'disabled' : ''}}>ลบช่าง 2</button>
+                                        </h4>
+                                        <hr>
+                                        <div class="form-group row required {{isset($gold_data->gold_2) ?: 'd-none'}}" id="gold_second">
+                                            <div class="col-12 col-md-6">
+                                                <label for="gold2">น้ำหนักทองที่ใช้</label>
+                                                <div class="input-group input-group-lg">
+                                                    <input type="text" class="money-format form-control not-require text-right sucess-element gold" name="gold_2" class="form-control" value="{{ isset($gold_data->gold_2) ? $gold_data->gold_2->value : '' }}"
+                                                            {{isset($bill) && $bill->status == 1 && $role !== 4 ? 'readonly' : ''}}>
+                                                    <input type="text" class="d-none" name="gold_id_2" value="{{ isset($gold_data->gold_2) ? $gold_data->gold_2->id : '' }}">
+                                                    <div class="input-group-append">
+                                                        <span class="input-group-text">กรัม</span>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                            <div class="col-12 col-md-6">
+                                                <label for="craft_id">ช่างทอง</label>
+                                                <select class="custom-select custom-select-lg sucess-element" id="craft_id_2" name="craft_id_2"
+                                                        {{isset($bill) && $bill->status == 1 && $role !== 4 ? 'disabled' : ''}}>
+                                                    <option value="" selected disabled hidden >กรุณาระบุช่างทอง</option>
+                                                    @if(isset($craft))
+                                                        @foreach($craft as $l)
+                                                            <option value="{{$l['id']}}" {{ isset($gold_data->gold_2) ?
+                                                                                         ( $gold_data->gold_2->craft_id == $l['id'] ? 'selected' : '')
+                                                                                         : '' }}
+                                                            >
+                                                                {{$l['name']}}
+                                                            </option>
+                                                        @endforeach
+                                                    @else
+                                                        <option value="" hidden disabled>ไม่พบช่างทองในสาขา</option>
+                                                    @endif
+                                                </select>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+
+                            </div>
+                            <div class="modal-footer justify-content-center">
+                                <button type="button" class="btn btn-primary btn-lg mr-2" id="btn-gold" data-dismiss="modal" disabled>ทำรายการต่อ</button>
+                                <button type="button" class="btn btn-secondary btn-lg" data-dismiss="modal">ย้อนกลับ</button>
+                            </div>
+                        </div>
+                    </div>
+
+                </div>
 
             </form>
 
@@ -601,7 +787,10 @@
 <button type="button" class="d-none" id="modalPrint-btn" data-toggle="modal" data-target="#modalPrint">
 </button>
 
-<button type="button" class="d-none" id="modalPay-btn" data-toggle="modal" data-target="#modalPay">
+<button type="button" class="d-none" id="modalGold-btn" data-toggle="modal" data-target="#modalGold">
+</button>
+
+<button type="button" class="d-none" id="modalGoldError-btn" data-toggle="modal" data-target="#modalGoldError">
 </button>
 
 <button type="button" class="d-none" id="modalPayError-btn" data-toggle="modal" data-target="#modalPayError">
@@ -611,6 +800,9 @@
 </button>
 
 <button type="button" class="d-none" id="modalBillVoidError-btn" data-toggle="modal" data-target="#modalBillVoidError">
+</button>
+
+<button type="button" class="d-none" id="modalGoldVoid-btn" data-toggle="modal" data-target="#modalGoldVoid">
 </button>
 
 <div class="modal fade" id="myModal" tabindex="-1" role="dialog" aria-labelledby="myModal" aria-hidden="true" data-keyboard="false" data-backdrop="static">
@@ -699,6 +891,16 @@
                                     <strong>{{ $errors->first('line') }}</strong>
                                 </span>
                             @endif
+                        </div>
+                    </div>
+
+                    <div class="form-group row">
+                        <label for="line" class="col-md-4 col-form-label text-md-right"></label>
+                        <div class="col-md-6">
+                            <div class="custom-control custom-checkbox mt-1 mb-0 mr-sm-2">
+                                <input type="checkbox" class="custom-control-input" checked  id="customControlInline" name="already_used" value="1" >
+                                <label class="custom-control-label" for="customControlInline">ลูกค้าใหม่ [ยังไม่เคยใช้บริการ]</label>
+                            </div>
                         </div>
                     </div>
 
@@ -802,7 +1004,8 @@
                                         </div>
                                     </div>
                                 </div>
-                                <h4 class="text-center mb-0 mt-3">รวมทั้งสิ้น <strong><span id="deliver-cost"></span> บาท</strong></h4>
+                                <p class="mt-2"><strong id="deliver-material_" style="display: none">ส่วนประกอบ <span id="deliver-material"></span></strong></p>
+                                <h3 class="text-center mb-0 ">รวมทั้งสิ้น <strong><span id="deliver-cost"></span> บาท</strong></h3>
                             </div>
                         </div>
 
@@ -878,62 +1081,6 @@
         </div>
     </div>
 
-<div class="modal fade" id="modalPay" tabindex="-1" role="dialog" aria-labelledby="modalPay" aria-hidden="true" data-keyboard="false" data-backdrop="static">
-
-    <div class="modal-dialog modal-pay" role="document">
-            <div class="modal-content">
-                <div class="modal-body pt-4">
-                    <div class="row justify-content-center">
-                        <div class="col-11 col-md-10">
-                            <h2 class="text-center">ยืนยันการปิดบิล</h2>
-                            <p class="text-center">กรุณาบันทึกน้ำหนักทองที่ใช้ (ไม่มีใส่ค่า 0)</p>
-                        </div>
-                    </div>
-                    <div class="row justify-content-center">
-                        <div class="col-12 col-md-10">
-                            <div class="form-group row required">
-                                <div class="col-12">
-                                <label for="gold">น้ำหนักทองที่ใช้</label>
-                                <div class="input-group input-group-lg">
-                                    <input type="text" class="money-format form-control not-require text-right sucess-element" name="gold_" id="gold" class="form-control">
-                                    <div class="input-group-append">
-                                        <span class="input-group-text">กรัม</span>
-                                    </div>
-                                </div>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                    <div class="row justify-content-center">
-                        <div class="col-12 col-md-10">
-                            <div class="form-group row required">
-                                <div class="col-12">
-                                <label for="craft_id">ช่างทอง</label>
-                                <select class="custom-select custom-select-lg sucess-element" id="craft_id" name="craft_id">
-                                    <option value="" selected disabled hidden >กรุณาระบุช่างทอง</option>
-                                    @if(isset($craft))
-                                        @foreach($craft as $l)
-                                            <option value="{{$l['id']}}">{{$l['name']}}</option>
-                                        @endforeach
-                                    @else
-                                         <option value="" hidden disabled>ไม่พบช่างทองในสาขา</option>
-                                    @endif
-                                </select>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-
-                </div>
-                <div class="modal-footer justify-content-center">
-                    <button type="submit" class="btn btn-primary btn-lg mr-2" id="btn-sucess" disabled>ยืนยัน ปิดบิล</button>
-                    <button type="button" class="btn btn-secondary btn-lg" data-dismiss="modal">ยกเลิก</button>
-                </div>
-            </div>
-        </div>
-
-</div>
-
 <div class="modal fade" id="modalPayHistory" tabindex="-1" role="dialog" aria-labelledby="modalPayHistory" aria-hidden="true" data-keyboard="false" data-backdrop="static">
 
     @if(isset($payment))
@@ -964,7 +1111,9 @@
                                 <th scope="col" class="disabled" width="100">ยอด</th>
                                 <th scope="col" class="disabled" width="35">โดย</th>
                                 <th scope="col" class="disabled" >หมายเหตุ</th>
+                                @if(isset($bill) && ( $bill->status == 0 || $role == 4 ))
                                 <th scope="col" class="disabled" width="30">ยกเลิก</th>
+                                @endif
                             </tr>
                             </thead>
                             <tbody>
@@ -979,6 +1128,7 @@
                                         @case('credit')<td><small>บัตรเครดิต</small></td>@break
                                         @case('online')<td><small>ออนไลน์</small></td>@break
                                         @case('coupon')<td><small>คูปอง</small></td>@break
+                                        @case('voucher')<td><small>Voucher</small></td>@break
                                         @default<span>-</span>
                                     @endswitch
                                     <td>
@@ -988,10 +1138,12 @@
                                         <small> ({{ isset($p->cause) ? $p->cause : ''}})</small>
                                         @endif
                                     </td>
+                                    @if(isset($bill) && ( $bill->status == 0 || $role == 4 ))
                                     <td class="text-center"><a href="" id="" class="badge badge-danger btn-void {{ isset($p->cause) ? 'd-none' : ''}}" data-toggle="modal" data-dismiss="modal" data-target="#modalPayVoid"  data-id='{{$p->id}}' data-bill="{{ isset($bill) ? $bill->id : '' }}" data-path='{{ url('bill/payment/delete?id=') }}'>
                                             <span class="oi oi-x mb-1"></span>
                                         </a>
                                     </td>
+                                    @endif
                                 </tr>
                                 @endforeach
 
@@ -1083,6 +1235,7 @@
         </form>
     </div>
 
+
 <div class="modal fade" id="modalPayError" tabindex="-1" role="dialog" aria-labelledby="modalPayError" aria-hidden="true" data-keyboard="false" data-backdrop="static">
     <div class="modal-dialog modal-err" role="document">
         <div class="modal-content">
@@ -1097,6 +1250,36 @@
         </div>
     </div>
 </div>
+
+<div class="modal fade" id="modalGoldError" tabindex="-1" role="dialog" aria-labelledby="modalGoldError" aria-hidden="true" data-keyboard="false" data-backdrop="static">
+        <div class="modal-dialog modal-err" role="document">
+            <div class="modal-content">
+                <div class="modal-body pt-4">
+                    <h2 class="text-center">ยังไม่ได้ลงยอดใช้ทอง</h2>
+                    <p class="text-center">ถ้าหากไม่มีการใช้ทอง ให้เลือกบิลนี้ไม่ใช้ทอง</p>
+                </div>
+                <div class="modal-footer justify-content-center">
+                    <button type="button" class="btn btn-primary btn-lg" data-toggle="modal" data-target="#modalGold" data-dismiss="modal">ลงทอง</button>
+                    <button type="button" class="btn btn-secondary btn-lg"  data-dismiss="modal">ยกเลิก</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+<div class="modal fade" id="modalGoldVoid" tabindex="-1" role="dialog" aria-labelledby="modalGoldError" aria-hidden="true" data-keyboard="false" data-backdrop="static">
+        <div class="modal-dialog modal-err" role="document">
+            <div class="modal-content">
+                <div class="modal-body pt-4">
+                    <h2 class="text-center">ต้องล้างยอดทอง</h2>
+                    <p class="text-center">หากมีการยกเลิก การใช้ทองในรายการนี้</p>
+                </div>
+                <div class="modal-footer justify-content-center">
+                    <button type="button" class="btn btn-secondary btn-lg" id="gold-void-cancle" data-dismiss="modal">ยกเลิก</button>
+                    <button type="button" class="btn btn-danger btn-lg" id="gold-void" data-dismiss="modal">ยืนยัน ล้างยอดทอง</button>
+                </div>
+            </div>
+        </div>
+    </div>
 
 <div class="modal fade" id="modalBillVoidError" tabindex="-1" role="dialog" aria-labelledby="modalBillVoidError" aria-hidden="true" data-keyboard="false" data-backdrop="static">
         <div class="modal-dialog modal-err" role="document">
@@ -1119,11 +1302,12 @@
             <div class="modal-dialog modal-flash-user" role="document">
                 <div class="modal-content">
                     <div class="modal-body pt-4">
-                        <h2 class="text-center">ยินดีต้อนรับ</h2>
-                        <p class="text-center">{{Auth::user()->u_name .' สาขา'. Auth::user()->branch->name}}</p>
+                        <h2 class="text-center">{{Auth::user()->u_name .' สาขา'. Auth::user()->branch->name}}</h2>
+                        <p class="text-center m-0">ยินดีต้อนรับ {{Auth::user()->u_name}}</p>
+                        <p class="text-center m-0">รายการจะถูกบันทึกลงใน สาขา{{Auth::user()->branch->name}}</p>
                     </div>
                     <div class="modal-footer justify-content-center">
-                        <button type="button" class="btn btn-primary btn-lg"data-dismiss="modal">ดำเนินการต่อ</button>
+                        <button type="button" class="btn btn-primary btn-lg"data-dismiss="modal">เริ่มต้นใช้งาน</button>
                     </div>
                 </div>
             </div>
@@ -1147,6 +1331,11 @@
 
         $(document).ready(function($) {
 
+            setTimeout(function(){
+                $('[autocomplete=off]').click();
+                $("#name").prop("readonly", false);
+            }, 100);
+
             $('#inputdatepicker').datepicker({
                 autoclose: true,
                 format: 'dd/mm/yyyy',
@@ -1168,6 +1357,7 @@
                 $('#total').val(formatMoney(sumValue('.cost-job,.material-job')));
                 $('#material_cost').val(formatMoney(sumValue('.material-job')));
                 $('.payment-method').trigger('change');
+                $('#gold_input_check').trigger('change');
             });
 
             $('.input-group-text').click(function(){
@@ -1176,7 +1366,17 @@
 
             $('#inputdatepicker').on('focus',function () {$(this).blur();})
 
+            $.ajaxSetup({
+                headers: {
+                    'X-CSRF-TOKEN': '{{ csrf_token() }}'
+                }
+            });
+
             $("#image-file").fileinput({
+                headers: {
+                    'X-CSRF-TOKEN': '{{ csrf_token() }}'
+                },
+                data: {'_token': "{{csrf_token()}}"},
                 @if(isset($imagePart))
                 @if(count($imagePart) > 0)
                     initialPreview: [
@@ -1470,6 +1670,9 @@
                 }
             });
 
+
+
+
             $('#name').bind("keyup change",function(e) {
                 let value = $(this).val();
                 let phone = $('#phone').val();
@@ -1548,6 +1751,7 @@
                 let arrHasCostJob = [];
                 let arrHasJob = [];
                 let arrCostJob = [];
+                let sumCost = 0;
                 let arrJob = [];
                 let arrMaterial = [];
                 let selector = '.td-job.not-null';
@@ -1555,7 +1759,7 @@
                 $(selector).each(function () {
                     let value = $(this).children().val();
                     let data = $(this).children().data();
-                    //console.log(value);
+
                     if (value !== '' && data.hookCostJob !== undefined){
                         arrHasCostJob.push(data.hookCostJob)
                         let pre = {
@@ -1574,15 +1778,20 @@
                             value : value
                         };
                         arrJob.push(pre);
-                        //console.log(arrJob)
+
+                        sumCost = sumCost + data.price;
+                        if(sumCost === 0) {
+                            arrHasCostJob.push(data.hookJob)
+                        }
+
                     } else if(value !== '' && data.hookMaterial !== undefined){
                         let pre = {
                             material_id : data.hookMaterial,
                             value : parseFloat(value.replace(/,/g, ""))
                         };
                         arrMaterial.push(pre);
-                        //console.log(arrJob)
                     }
+
 
                 })
 
@@ -1599,6 +1808,7 @@
                 let filePreview = $('#image-file').fileinput('getPreview').content.length;
                 let filesCount = filesNum - filePreview;
 
+
                 if (validateInput(validTable)) {
 
                     if (filesCount > 0){
@@ -1614,7 +1824,6 @@
                             $('form#create_main').submit()
                         }, 2000);
                     }
-
                 } else {
                     $( "#modalError-btn" ).trigger( "click" );
                 }
@@ -1630,14 +1839,19 @@
             })
 
             //input job
+            $('#allow_zero').on('click', function(){
+                $('.text-area-job').trigger('change');
+            })
+
+
 
             $('.text-area-job').on('change',function () {
                 let value = $(this).val().split('/');
                 let element = $(this).parent().children('.value-area-job');
                 let checkFloat = $.isNumeric($(this).val().replace(/\//g, ''));
                 let checkVal1 = value[1] < 0 || value[1] === '' ? false : true;
+                let allow_zero = $('#allow_zero').is(":checked");
                 let element_ = $(this);
-
 
                 if (value[0] !== "" && value[0] > 0 && checkFloat && checkVal1) {
                     if ($.isNumeric(value[1])){
@@ -1660,15 +1874,18 @@
                     }
                     element.show();
                     element_.hide();
+
+
                 } else {
+
                     element.children('span.badge-amount').text('')
                     element.children('span.badge-price').text('')
                     element_.val('');
                     element_.attr("data-amount", '');
                     element_.attr("data-price", '');
-                }
 
-                sumRow(element_.data().hookJob);
+                }
+                sumRow(element_.data().hookJob, allow_zero);
 
             })
 
@@ -1706,10 +1923,11 @@
             });
 
             $('#pay_cause').on('keyup',function () {
-                if ($(this).length > 0){
-                    $( "#btn-submit-void" ).prop('disabled',false);
+                //console.log($(this).val())
+                if ($(this).val() == ""){
+                    $( "#btn-submit-void" ).prop('disabled',true)
                 } else {
-                    $( "#btn-submit-void" ).prop('disabled',true);
+                    $( "#btn-submit-void" ).prop('disabled',false);
                 }
             });
 
@@ -1728,12 +1946,19 @@
                 $('#btn-submit').trigger('click');
             })
 
+            //ฟัคยู ดีลีเวอร์
             $('#btn-modal-deliver').on('click',function () {
-                if ( !isUpdate() ){
-                    $('#deliver-cost').text($('#total').val());
-                    $('#modalDeliver-btn').trigger('click');
-                } else {
+                let m = $('input[name="deliver_material"]').val();
+                let gold_ = $('input[name="gold_"]').val();
+                let gold_check = $('#gold_input_check').get(0).checked;
+                if (isUpdate()){
                     $('#modalDeliverError-btn').trigger('click');
+                }
+                else {
+                    $('#deliver-cost').text($('#total').val());
+                    $('#deliver-material').text(m)
+                    m !== '' ? $('#deliver-material_').show() : $('#deliver-material_').hide();
+                    $('#modalDeliver-btn').trigger('click');
                 }
             })
 
@@ -1741,47 +1966,24 @@
                 $('#btn-submit').trigger('click');
             })
             
-            $('#btn-modal-success').on('click',function () {
+            //เด้ง modal ลงทอง
+
+            $('#btn-close-success').on('click',function () {
                 let oldCost = $('input[name="cost_data"]').val();
                 let oldPay = $('input[name="cash_val"]').val();
-                if(oldCost === oldPay){
-                    $('#modalPay-btn').click()
-                } else {
+                let gold_ = $('input[name="gold_"]').val();
+                let gold_check = $('#gold_input_check').get(0).checked;
+                if( gold_ == '' && !gold_check){
+                    $('#modalGoldError-btn').click();
+                    return false
+                }else if( oldCost !== oldPay ){
                     $('#modalPayError-btn').click()
-                }
-
-            })
-            
-            $('#btn-sucess').on('click',function () {
-                let gold = $('input[name="gold_"]').val();
-                let craft_id = $('#craft_id').val();
-                $('input[name="gold"]').val(gold);
-                $('input[name="craft_id"]').val(craft_id);
-                $('#btn-submit').click();
-            })
-
-            $('.sucess-element').on('change',function () {
-                let val = $('#gold').val();
-                let craft_id = $('#craft_id').val();
-                if (val !== '' && craft_id !== null){
-                    $('#btn-sucess').prop('disabled', false )
+                    return false
                 } else {
-                    $('#btn-sucess').prop('disabled', true )
+                    $('input[name="close_bill"]').val(1);
+                    $('#btn-submit').click();
                 }
-
             })
-
-            $('#gold').on('change',function () {
-                let val = $(this).val();
-                console.log(val)
-                if (val === '' && !isNaN(val)) {
-                    $(this).val('');
-                } else if(val.indexOf('.') == -1) {
-                    $(this).val(parseFloat($(this).val()).toFixed(2));
-                } else {
-                    $(this).val(val);
-                }
-            });
 
             $('#cause-bill-void').on('change',function () {
                 let val = $(this).val()
@@ -1802,6 +2004,101 @@
                 }
             })
 
+            //gold zone
+
+            $('#gold').on('change',function () {
+                let val = $(this).val();
+                //console.log(val)
+                if (val === '' && !isNaN(val)) {
+                    $(this).val('');
+                } else if(val.indexOf('.') == -1) {
+                    $(this).val(parseFloat($(this).val()).toFixed(2));
+                } else {
+                    $(this).val(val);
+                }
+            });
+
+            $('#gold_input_check').bind('click change',function () {
+                let gold_ = $('input[name="gold_"]');
+                if (!($(this).get(0).checked)){
+                    $('#gold_input').show();
+                } else {
+                    if (gold_.val() > 0){
+                        $('#modalGoldVoid-btn').click()
+                    }
+                    else {
+                        $('#gold_input').hide();
+                    }
+                }
+            })
+
+            $('#gold-void').on('click',function () {
+                let gold_ = $('input[name="gold_"], #craft_id_, input[name="gold_2"], #craft_id_2');
+                $('#gold_input').hide();
+                gold_.val('')
+                $('#gold').trigger('change')
+            })
+            
+            $('#gold-void-cancle').on('click',function () {
+                $('#gold_input_check').prop('checked',false);
+            })
+
+            $('.sucess-element').bind('keyup change',function () {
+                let gold_ = $('input[name="gold_"]').val() !== '' ?  $('input[name="gold_"]').val() : 0  ;
+                let gold_c = $('#craft_id_').val();
+                let gold_2 = $('input[name="gold_2"]').val() !== '' ?  $('input[name="gold_2"]').val() : 0 ;
+                let gold_c2 = $('#craft_id_2').val();
+                let gold_complete = gold_ !== 0 && gold_c !== null
+                let gold_2_isactive = !$('#gold_second_toggle_').hasClass('d-none')
+                let gold_2_complete = gold_2 !== 0 && gold_c2 !== null
+                if (gold_2_isactive){
+                    if(gold_complete && gold_2_complete){
+                        $('#btn-gold').prop('disabled', false )
+                    } else {
+                        $('#btn-gold').prop('disabled', true )
+                    }
+                } else{
+                    if(gold_complete){
+                        $('#btn-gold').prop('disabled', false )
+                    } else {
+                        $('#btn-gold').prop('disabled', true )
+                    }
+                }
+                $('#gold_value').val(formatMoney(parseFloat(gold_) + parseFloat(gold_2)))
+            })
+
+            $('#gold_second_toggle, #gold_second_toggle_').on('click', function () {
+                $('#gold_second').toggleClass('d-none')
+                $('#gold_second_toggle').toggleClass('d-none')
+                $('#gold_second_toggle_').toggleClass('d-none')
+                $('#craft_id_2, input[name="gold_2"]').val('')
+                $('#gold').trigger('change')
+            })
+
+            $('#craft_id_2').on('focus',function () {
+                let select = $('#craft_id_').find(":selected").val();
+                $('#craft_id_2').children().each(function() {
+                    if($(this).val() == select){
+                        $(this).addClass('d-none')
+                    } else {
+                        $(this).removeClass('d-none')
+                    }
+                })
+            })
+
+            $('#craft_id_').on('focus',function () {
+                let select = $('#craft_id_2').find(":selected").val();
+                $('#craft_id_').children().each(function() {
+                    if($(this).val() == select){
+                        $(this).addClass('d-none')
+                    } else {
+                        $(this).removeClass('d-none')
+                    }
+                })
+            })
+
+
+
             function sumValue(selector){
                 let sum = 0;
                 $(selector).each(function() {
@@ -1811,7 +2108,7 @@
                 return sum
             }
 
-            function sumRow(rowId) {
+            function sumRow(rowId, allow_zero=false) {
                 let sum = 0;
                 let tr_element = $('.text-area-job[data-hook-job='+rowId+']').parent().parent().children('.not-null').not('.cost-job');
                 tr_element.children('.text-area-job').each(function () {
@@ -1824,13 +2121,33 @@
                         }
                     }
                 })
-                if (sum > 0) {
-                    $('input[data-hook-cost-job='+rowId+']').val(formatMoney(sum));
-                } else {
-                    $('input[data-hook-cost-job='+rowId+']').val("");
+
+                if(allow_zero)
+                {
+
+                    if (sum >= 0 && tr_element.length > 0) {
+                        if(tr_element[0].classList.length < 3){
+                            $('input[data-hook-cost-job='+rowId+']').val(formatMoney(sum));
+                        } else {
+                            $('input[data-hook-cost-job='+rowId+']').val("");
+                        }
+                    }
+                    else {
+                        $('input[data-hook-cost-job='+rowId+']').val("");
+                    }
+                }
+                else
+                {
+                    if (sum > 0) {
+                        $('input[data-hook-cost-job='+rowId+']').val(formatMoney(sum));
+                    }
+                    else {
+                        $('input[data-hook-cost-job='+rowId+']').val("");
+                    }
                 }
 
                 $(".cost-job").trigger('change');
+
             }
 
             function formatMoney(value){
@@ -1842,6 +2159,8 @@
             }
 
             function validateTable(arr_1, arr_2,items,data_) {
+                console.log('arr_1',arr_1);
+                console.log('arr_2',arr_2);
                 let err = [];
                 $.each(arr_1, function (index, val) {
                     if ($.inArray(val, arr_2) == -1) {
@@ -1901,7 +2220,7 @@
                     let value = $(this).val();
                     if (value === ''){
                         $(this).addClass('is-invalid');
-                        $(this).parent().children($('.invalid-feedback')).children().text('กรุณากรอกข้อมูล ');
+                        $(this).parent().children($('.invalid-feedback')).children().text('กรุณากรอกข้อมูล');
                         $('html, body').animate({
                             scrollTop: $('body').offset().top // Means Less header height
                         },400);
@@ -1994,8 +2313,16 @@
                 let cost = (oldCost - currentCost) === 0;
                 let customer = (oldCustomer - currentCustomer) === 0;
                 let date = (currentDate === oldDate);
-
-                if (file && pay && cost && customer && date){
+                let gold_old = $('input[name="gold"]').val();
+                let gold_2_old = $('input[name="gold2"]').val();
+                let gold_ = $('input[name="gold_"]').val();
+                let gold_2 = $('input[name="gold_2"]').val();
+                let goldUpdate =  (gold_old == gold_) && (gold_2_old == gold_2)
+                let gold_status_old = $('input[name="gold_status"]').val();
+                let gold_check = $('#gold_input_check').get(0).checked ? 0 : 1;
+                let gold_status = gold_status_old == gold_check ;
+                console.log(gold_status_old);
+                if (file && pay && cost && customer && date && goldUpdate && gold_status){
                     return false
                 } else {
                     return true

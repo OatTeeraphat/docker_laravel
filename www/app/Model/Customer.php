@@ -21,6 +21,8 @@ class Customer extends Model
         'address',
         'line',
         'activate',
+        'increment',
+        'already_used'
     ];
 
 

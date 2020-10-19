@@ -10,6 +10,7 @@
         <div class="col-11 col-lg-4 col-sm-10 text-center login-container">
             <img src="{{ url('/') }}/public/images/jewerly-t.png" class="logo-main" alt="">
             <h3>เข้าสู่ระบบ</h3><br>
+
             <form method="POST" action="{{ url('login') }}" id="login-form"  autocomplete="off">
                 @csrf
                 <input type="password" class="d-none" name="password-fuck-off"  />

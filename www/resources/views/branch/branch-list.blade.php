@@ -3,7 +3,7 @@
 @section('content')
     <div class="container">
         <div class="row justify-content-center">
-            <div class="col-md-10">
+            <div class="col-12">
                 <div class="row">
                     <nav aria-label="breadcrumb">
                         <ol class="breadcrumb bg-transparent py-0">
@@ -32,7 +32,7 @@
                         </div>
                         <div class="table-responsive"></div>
                         <input type="password" class="d-none" />
-                        <table id="Table" class="table table-striped table-bordered">
+                        <table id="Table" class="table table-striped table-bordered table-report">
                             <thead>
                             <tr>
                                 <th>#</th>
