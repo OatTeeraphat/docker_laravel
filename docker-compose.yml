@@ -6,8 +6,6 @@ services:
       container_name: lemp_php-fpm
       restart: always
       build : ./
-      links : 
-        - db
       volumes:
         - ./www/:/var/www/
       expose:
