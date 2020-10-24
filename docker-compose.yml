@@ -1,16 +1,5 @@
 version: '2'
 services:
-  db:
-      image: mariadb:latest
-      container_name: lemp_mariadb
-      restart: always
-      volumes:
-        - ./mysql/initdb/:/docker-entrypoint-initdb.d
-        - ./mysql/data/:/var/lib/mysql
-      env_file:
-        - ./env/mariadb.env
-      ports:
-        - 3306:3306
       
   php:
       image: php:7.2-fpm
@@ -36,12 +25,3 @@ services:
         - php
       ports:
         - 80:80
-
-  pma:
-    image: phpmyadmin/phpmyadmin
-    container_name: lemp-phpmyadmin
-    restart: always
-    env_file:
-        - ./env/pma.env
-    expose:
-      - 80

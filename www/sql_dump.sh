@@ -1,1 +1,0 @@
-docker exec $(docker ps -q -f name=lemp_mariadb) mysqldump -u lemp --password=123456 lemp_db > ./backup.sql
